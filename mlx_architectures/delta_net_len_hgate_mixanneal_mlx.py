@@ -10,11 +10,10 @@ import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
+def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
     if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
@@ -39,10 +38,9 @@ def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
 
 def _l2norm(x: mx.array) -> mx.array:
     """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
-        keepdims=True).clip(min=1e-8)
+    return x / mx.linalg.norm(x, axis=-1, keepdims=True).clip(min=1e-8)
 
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
+def _masked_fill(tensor: mx.array, mask: mx.array, value: float) -> mx.array:
     """Masked fill operation"""
     return mx.where(mask, value, tensor)
 
