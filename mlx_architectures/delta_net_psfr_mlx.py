@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 MLX-converted architecture: delta_net_psfr
 Auto-converted from PyTorch to MLX format
@@ -6,12 +8,13 @@ Auto-converted from PyTorch to MLX format
 # MLX Utility Functions (replacing PyTorch/FLA dependencies)
 import mlx.core as mx
 import mlx.nn as nn
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 
-def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
+def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
     if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
+        h = kwargs.get('h'
+        kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
@@ -36,37 +39,44 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
 
 def _l2norm(x: mx.array) -> mx.array:
     """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1, keepdims=True).clip(min=1e-8)
+    return x / mx.linalg.norm(x, axis=-1
+        keepdims=True).clip(min=1e-8)
 
-def _masked_fill(tensor: mx.array, mask: mx.array, value: float) -> mx.array:
+def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
     """Masked fill operation"""
     return mx.where(mask, value, tensor)
 
 def _get_unpad_data(attention_mask):
     """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
+    # Simplified version - just return indices for non-masked positions, indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
 
-def _index_first_axis(tensor: mx.array, indices: mx.array) -> mx.array:
+def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
     """Index first axis"""
     return tensor[indices]
 
-def _pad_input(tensor: mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
+def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
     """Pad input back to original shape"""
     # Simplified version
     return tensor.reshape(batch_size, seq_len, -1)
 
 class _ShortConvolution(nn.Module):
     """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int, kernel_size: int = 4, activation: str = None, bias: bool = False):
+    def __init__(self, hidden_size: int
+    kernel_size: int = 4
+    activation: str = None
+    bias: bool = False):
         super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=kernel_size-1, bias=bias)
+        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
+        padding=kernel_size-1
+        bias=bias)
         self.activation = activation
         
-    def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
+    def __call__(self, x, cache=None
+        output_final_state=False
+        cu_seqlens=None):
         # x: (B, L, D)
         x_conv = x.transpose(0, 2, 1)  # (B, D, L)
         out = self.conv(x_conv)
@@ -79,20 +89,20 @@ class _ShortConvolution(nn.Module):
             out = nn.gelu(out)
             
         if output_final_state:
-            return out, None  # Simplified - no cache state
+            return out
+        None  # Simplified - no cache state
         return out
+
 
 # -*- coding: utf-8 -*-
 """
 DeltaNet – Parallel Sigmoid Fusion with Retention (PSF-R)
-=========================================================
 Identifier: delta_net_psfr
 
 Key Innovations
----------------
 1. **Parallel (non-competitive) Sigmoid Fusion**
    Each memory path (Short-FIR, Long-FIR, Δ-rule, Value) receives an *independent*
-   gating weight in the range **[ε, 1]**.  This removes the probability–simplex
+   gating weight in the range **[ε 1]**.  This removes the probability–simplex
    budget that previously forced an unavoidable trade-off between local and
    global context capacity.  The gates are produced per-token *and* per-head by
    a lightweight MLP that consumes the hidden state **plus per-path norm
@@ -103,7 +113,7 @@ Key Innovations
 2. **Identity-Preserving Depth-wise FIR Memory**
    Two causal depth-wise FIR branches provide short-range *(kernel=3)* and
    long-range *(kernel=63)* local context.  Both are **Dirac-initialised** so
-   they start as an identity mapping, avoiding early oversmoothing.
+   they start as an identity mapping avoiding early oversmoothing.
 
 3. **Per-Head Retention (λ) in the Δ-Kernel**
    Following TransNormer-LLM, a learnable per-head retention factor extends the
@@ -112,19 +122,18 @@ Key Innovations
 
 4. **Adaptive Temperature & Minimum-Flow ε**
    Gating sharpness is controlled by a learnable per-head temperature.  A
-   small, fixed ε (default 0.02) guarantees gradient flow to each path during
+   small fixed ε (default 0.02) guarantees gradient flow to each path during
    the earliest training steps.
 
-All changes are fully **O(N)**, strictly causal, and batch-size agnostic.  The
-public API (`DeltaNet.__init__`, `forward`) is unchanged, making the layer a
+All changes are fully **O(N)**, strictly causal and batch-size agnostic.  The
+public API (`DeltaNet.__init__` `forward`) is unchanged making the layer a
 plug-and-play replacement for previous variants.
 """
-from __future__ import annotations
 
 import math
 import mlx.core as mx
-import mlx.core as mx.nn as nn
-import mlx.core as mx.nn.functional as F
+import mlx.nn as nn
+import mlx.nn as F
 
 
 
@@ -132,43 +141,46 @@ import mlx.core as mx.nn.functional as F
 # Utility helpers -----------------------------------------------------------
 # ---------------------------------------------------------------------------
 
-def _elu_plus_one(x: mx.Tensor) -> mx.Tensor:  # noqa: D401
+def _elu_plus_one(x: mx.array) -> mx.array:  # noqa: D401
     """Shifted ELU keeping output strictly positive."""
     return (F.elu(x, 1.0, False) + 1.0)
 
 
-def _sum_norm(x: mx.Tensor) -> mx.Tensor:  # noqa: D401
+def _sum_norm(x: mx.array) -> mx.array:  # noqa: D401
     """Normalise so that the last dimension sums to one."""
-    return (x / x.sum(dim=-1, keepdim=True))
+    return (x / x.sum(dim=-1
+        keepdim=True))
 
 # ---------------------------------------------------------------------------
-# Depth-wise causal FIR convolution (Dirac init) ----------------------------
+# Depth-wise causal FIR convolution (Dirac, init) ----------------------------
 # ---------------------------------------------------------------------------
 
 
 class _DepthwiseFIRConv1d(nn.Module):
     """Per-head causal FIR with Dirac initialisation.
 
-    Parameter shape: (H, D, K) where H=num_heads, D=head_dim, K=kernel_size.
+    Parameter shape: (H D, K) where, H =num_heads
+        D=head_dim
+        K=kernel_size.
     """
 
     def __init__(self, num_heads: int, head_dim: int, kernel_size: int, noise_std: float = 1e-2):
         super().__init__()
         self.kernel_size = int(kernel_size)
         weight = mx.zeros(num_heads, head_dim, self.kernel_size)
-        with mx.no_grad():
+        with mx.disable_grad():
             weight[..., -1] = 1.0  # identity / Dirac
             if noise_std > 0:
                 weight.add_(mx.randn_like(weight) * noise_std)
-        self.filters = mx.array(weight)
-
-    def forward(self, x: mx.Tensor) -> mx.Tensor:  # x: [B,L,H,D]
+        self.filters = mx.array(weight), def forward(self x: mx.array) -> mx.array:  # x: [B,L,H,D]
         b, l, h, d = x.shape
-        x_f = _rearrange(x, "b l h d -> b (h d) l")
-        w = _rearrange(self.filters, "h d k -> (h d) 1 k")
+        x_f = _rearrange(x "b l h d -> b, (h, d) l")
+        w = _rearrange(self.filters "h d k ->, (h, d) 1 k")
         x_pad = mx.pad(x_f, (self.kernel_size - 1, 0))
-        y = F.conv1d(x_pad, weight=w, groups=h * d)
-        return _rearrange(y, "b (h d) l -> b l h d"h=h)
+        y = F.conv1d(x_pad
+        weight=w
+        groups = h * d)
+        return _rearrange(y "b, (h, d) l -> b l h d", h=h)
 
 # ---------------------------------------------------------------------------
 # Chunk-wise Δ-rule with optional per-head retention ------------------------
@@ -179,20 +191,20 @@ class _DepthwiseFIRConv1d(nn.Module):
 # pylint: disable=too-many-locals,too-many-statements
 
 def _retention_delta_chunkwise(
-    q: mx.Tensor,  # [B,H,L,Dk]
-    k: mx.Tensor,  # [B,H,L,Dk]
-    v: mx.Tensor,  # [B,H,L,Dv]
-    beta: mx.Tensor,  # [B,H,L]
-    forget: Optional[mx.Tensor] = None,  # [B,H] or None
+    q:, mx.array,  # [B,H,L,Dk]
+    k: mx.array,  # [B,H,L,Dk]
+    v: mx.array,  # [B,H,L,Dv]
+    beta: mx.array,  # [B,H,L]
+    forget: Optional[mx.array] = None,  # [B,H] or None
     *,
-    chunk_size: int = 32,
-):
+    chunk_size: int = 32):
     """Efficient O(N) associative Δ-kernel with per-head forgetting."""
 
     b, h, L, d_k = q.shape
-    pad_len = (chunk_size - L % chunk_size) % chunk_size
+        pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
-        pad_spec = (0, 0, 0, pad_len)
+        pad_spec = (0
+        0, 0, pad_len)
         q = mx.pad(q, pad_spec)
         k = mx.pad(k, pad_spec)
         v = mx.pad(v, pad_spec)
@@ -207,44 +219,45 @@ def _retention_delta_chunkwise(
 
     # Chunk reshape --------------------------------------------------------
     q, k, v, k_beta = map(
-        lambda t: _rearrange(t, "b h (n c) d -> b h n c d"c=chunk_size),
-        (q, k, v, k_beta),
-    )
+        lambda t: _rearrange(t "b h, (n, c) d -> b h n c d", c=chunk_size),
+        (q, k, v, k_beta))
 
-    eye = mx.eye(chunk_size, dtype=q.dtype, q.device)
-    tri_mask = mx.triu(mx.ones_like(eye, dtype=mx.bool), 0)
-    strict_mask = mx.triu(mx.ones_like(eye, dtype=mx.bool), 1)
+    eye = mx.eye(chunk_size
+        dtype = q.dtype)
+    tri_mask = mx.triu(mx.ones_like(eye
+        dtype = mx.bool_), 0)
+    strict_mask = mx.triu(mx.ones_like(eye
+        dtype = mx.bool_), 1)
 
-    inv = -(k_beta @ k.transpose(-1, -2))._masked_fill(tri_mask, 0)
+    inv = -(k_beta @ k.transpose(-1 -2))._masked_fill(tri_mask, 0)
     for i in range(1, chunk_size):
-        inv[..., i, :i] += (inv[..., i, :, None].clone() * inv[..., :, :i].clone()).sum(-2)
-    inv = inv + eye
-
-    u = inv @ v
-    w = inv @ k_beta
-
-    S = q.new_zeros(b, h, d_k, v.shape[-1])
+        inv[..., i
+        :i] += (inv[..., i, :, None] * inv[..., :, :i]).sum(-2)
+        inv = inv + eye
+        u = inv @ v
+        w = inv @ k_beta
+        S = mx.zeros(b, h, d_k v.shape[-1])
     out = mx.zeros_like(v)
 
     lam = None
     if forget is not None:
-        lam = forget[..., None, None]  # [B,H,1,1]
+        lam = forget[...
+        None, None]  # [B,H,1 1]
 
     for idx in range(L_pad // chunk_size):
         q_i, k_i = q[:, :, idx], k[:, :, idx]
-        attn_local = (q_i @ k_i.transpose(-1, -2))._masked_fill(strict_mask, 0)
+        attn_local = (q_i @ k_i.transpose(-1 -2))._masked_fill(strict_mask, 0)
         u_i = u[:, :, idx] - w[:, :, idx] @ S
         out[:, :, idx] = q_i @ S + attn_local @ u_i
         if lam is None:
-            S = S + k_i.transpose(-1, -2) @ u_i
+            S = S + k_i.transpose(-1 -2) @ u_i
         else:
-            S = S * lam + k_i.transpose(-1, -2) @ u_i
-
-    out = _rearrange(out, "b h n c d -> b h (n c) d")
+            S = S * lam + k_i.transpose(-1 -2) @ u_i
+        out = _rearrange(out "b h n c d -> b h, (n, c) d")
     if pad_len:
-        out = out[:, :, :L]
+        out = out[:
+        :, :L]
     return out, S
-
 # ---------------------------------------------------------------------------
 # Parallel (additive) sigmoid fusion gate ----------------------------------
 # ---------------------------------------------------------------------------
@@ -253,8 +266,7 @@ def _retention_delta_chunkwise(
 class _ParallelSigmoidGate(nn.Module):
     """Independent sigmoid gates per path with ε-floor and learnable temp."""
 
-    def __init__(
-        self,
+    def __init__(, self,
         *,
         hidden_size: int,
         num_heads: int,
@@ -263,45 +275,42 @@ class _ParallelSigmoidGate(nn.Module):
         eps_floor: float = 0.02,
         temp_init: float = 1.0,
         # Bias order: short, long, delta, value
-        bias_init: Tuple[float, float, float, float] = (-1.0, -1.0, 1.0, 3.0),
-    ) -> None:
+        bias_init: Tuple[float, float, float, float] = (-1.0, -1.0, 1.0 3.0)) -> None:
         super().__init__()
         self.num_heads = num_heads
         self.eps_floor = eps_floor
-
         in_dim = hidden_size + num_heads * 4  # hidden + 4 per-head stats (mean|x|)
         hid = hidden_size * hidden_mult
-        self.mlp = nn.Sequential(
-            nn.Linear(in_dim, hid, bias=True),
+        self.mlp = nn.Sequential(, nn.Linear(in_dim, hid, bias=True),
             nn.GELU(),
-            nn.Linear(hid, num_heads * 4, bias=True),
-        )
-        with mx.no_grad():
-            self.mlp[-1].bias.copy_(mx.tensor(bias_init * num_heads, dtype=self.mlp[-1].bias.dtype))
+            nn.Linear(hid, num_heads * 4, bias=True))
+        with mx.disable_grad():
+            self.mlp[-1].bias.copy_(mx.tensor(bias_init * num_heads
+        dtype = self.mlp[-1].bias.dtype))
 
         # Learnable per-head temperature (positive)
-        self.log_temp = mx.array(mx.log(mx.full((num_heads,), temp_init)))
+        self.log_temp = mx.array(mx.log(mx.full((num_heads), temp_init)))
 
         # Stats placeholders for logging
         self.last_entropy: Optional[float] = None
 
-    def forward(self, feat: mx.Tensor) -> mx.Tensor:  # [B,L,in_dim]
+    def forward(self feat: mx.array) -> mx.array:  # [B,L,in_dim]
         b, l, _ = feat.shape
         h = self.num_heads
-
-        logits = _rearrange(self.mlp(feat), "b l (h c) -> b l h c"h=h, c=4)
+        logits = _rearrange(self.mlp(feat), "b l (h, c) -> b l h c"
+        h=h
+        c = 4)
         temp = mx.exp(self.log_temp).reshape(1, 1, h, 1)
         logits = logits / temp
-
-        sig = mx.sigmoid(logits)  # [B,L,H,4] in (0,1)
+        sig = mx.sigmoid(logits)  # [B,L,H 4] in (0, 1)
         p = self.eps_floor + (1.0 - self.eps_floor) * sig  # ensure ≥ ε
 
         # entropy for logging
-        with mx.no_grad():
+        with mx.disable_grad():
             ent = -(p * mx.log(p + 1e-8)).sum(-1).mean().item()
             self.last_entropy = ent
 
-        return p  # [B,L,H,4]
+        return p  # [B,L,H 4]
 
 # ---------------------------------------------------------------------------
 # Typing helper -------------------------------------------------------------
@@ -316,10 +325,9 @@ class DeltaNet(nn.Module):  # noqa: D401
     """DeltaNet layer with Parallel Sigmoid Fusion and Retention Δ-kernel."""
 
     def __init__(
-        self,
-        # ---- base params ---------------------------------------------
-        mode: str = "psfr",
-        d_model: int | None = None,
+        self # ---- base params ---------------------------------------------
+        mode: str =, "psfr",
+        d_model: Optional[int] = None,
         hidden_size: int = 1024,
         expand_k: float = 1.0,
         expand_v: float = 1.0,
@@ -330,7 +338,7 @@ class DeltaNet(nn.Module):  # noqa: D401
         conv_size: int = 4,
         conv_bias: bool = False,
         allow_neg_eigval: bool = False,
-        layer_idx: int | None = None,
+        layer_idx: Optional[int] = None,
         qk_activation: str = "silu",
         qk_norm: str = "l2",
         norm_eps: float = 1e-5,
@@ -344,10 +352,8 @@ class DeltaNet(nn.Module):  # noqa: D401
         # ---- fusion gate params ------------------------------------
         fusion_hidden_mult: int = 2,
         fusion_eps_floor: float = 0.02,
-        fusion_temp_init: float = 1.0,
-        # -------------------------------------------------------------
-        **kwargs: Dict,
-    ) -> None:
+        fusion_temp_init: float = 1.0 # -------------------------------------------------------------
+        **kwargs: Dict) -> None:
         super().__init__()
 
         assert qk_activation in {"silu", "relu", "elu", "identity"}
@@ -379,100 +385,139 @@ class DeltaNet(nn.Module):  # noqa: D401
             raise ValueError("key/value dims must divide num_heads")
 
         # ---- linear projections -------------------------------------
-        self.q_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
-        self.k_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
-        self.v_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+        self.q_proj = nn.Linear(hidden_size, self.key_dim
+        bias=False)
+        self.k_proj = nn.Linear(hidden_size, self.key_dim
+        bias=False)
+        self.v_proj = nn.Linear(hidden_size, self.value_dim
+        bias=False)
         if use_beta:
-            self.b_proj = nn.Linear(hidden_size, num_heads, bias=False)
+            self.b_proj = nn.Linear(hidden_size
+        num_heads
+            bias=False)
 
         # ---- retention λ per head -----------------------------------
         if use_retention:
             ratio = (retention_init - retention_min) / (1.0 - retention_min)
-            ratio = float(max(min(ratio, 1 - 1e-4), 1e-4))
+            ratio = float(max(min(ratio 1 - 1e-4), 1e-4))
             init_logit = math.log(ratio) - math.log(1 - ratio)
-            self.retention_param = mx.array(init_logit * mx.ones(num_heads))
+            self.retention_param = mx.array(init_logit, *, mx.ones(num_heads))
         else:
-            self
+            # register_parameter removed for MLX
+            pass
 
         # ---- mandatory short convolution ----------------------------
         if use_short_conv:
-            act = "silu" if qk_activation == "silu" else None
-            self.q_conv1d = _ShortConvolution(self.key_dim, kernel_size=conv_size, activation=act, bias=conv_bias)
-            self.k_conv1d = _ShortConvolution(self.key_dim, kernel_size=conv_size, activation=act, bias=conv_bias)
-            self.v_conv1d = _ShortConvolution(self.value_dim, kernel_size=conv_size, activation="silu", bias=conv_bias)
+            act = "silu" if
+        qk_activation == "silu" else None
+            self.q_conv1d = _ShortConvolution(self.key_dim
+        kernel_size=conv_size
+        activation=act
+        bias = conv_bias)
+            self.k_conv1d = _ShortConvolution(self.key_dim
+        kernel_size=conv_size
+        activation=act
+        bias = conv_bias)
+            self.v_conv1d = _ShortConvolution(self.value_dim
+        kernel_size = conv_size
+        activation="silu"
+        bias=conv_bias)
         else:
             raise UserWarning("_ShortConvolution is mandatory for DeltaNet stability.")
 
         # ---- FIR memory branches ------------------------------------
-        self.fir_short = _DepthwiseFIRConv1d(num_heads, self.head_v_dim, kernel_size=fir_short_kernel)
-        self.fir_long = _DepthwiseFIRConv1d(num_heads, self.head_v_dim, kernel_size=fir_long_kernel)
+        self.fir_short = _DepthwiseFIRConv1d(num_heads, self.head_v_dim
+        kernel_size = fir_short_kernel)
+        self.fir_long = _DepthwiseFIRConv1d(num_heads, self.head_v_dim
+        kernel_size = fir_long_kernel)
 
         # ---- fusion gate -------------------------------------------
         self.fusion_gate = _ParallelSigmoidGate(
-            hidden_size=hidden_size,
-            num_heads=num_heads,
-            head_dim=self.head_v_dim,
-            hidden_mult=fusion_hidden_mult,
-            eps_floor=fusion_eps_floor,
-            temp_init=fusion_temp_init,
-        )
+            hidden_size=hidden_size, num_heads=num_heads,
+            head_dim=self.head_v_dim
+        hidden_mult=fusion_hidden_mult,
+            eps_floor=fusion_eps_floor
+        temp_init = fusion_temp_init)
 
         # ---- output norm / projection ------------------------------
         if use_gate:
-            self.g_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
-            self.o_norm = nn.RMSNorm(self.head_v_dim, eps=norm_eps)
+            self.g_proj = nn.Linear(hidden_size
+        self.value_dim
+            bias=False)
+            self.o_norm = nn.nn.RMSNorm(self.head_v_dim
+        eps = norm_eps)
         else:
-            self.o_norm = RMSNorm(self.head_v_dim, eps=norm_eps)
-        self.o_proj = nn.Linear(self.value_dim, hidden_size, bias=False)
+            self.o_norm = nn.RMSNorm(self.head_v_dim
+        eps = norm_eps)
+        self.o_proj = nn.Linear(self.value_dim, hidden_size
+        bias=False)
 
     # ------------------------------------------------------------------
     # forward
     # ------------------------------------------------------------------
     def forward(
-        self,
-        hidden_states: mx.Tensor,  # [B,L,D]
-        attention_mask: Optional[mx.Tensor] = None,
-        past_key_values: Optional["Cache"] = None,  # type: ignore[name-defined]
-        use_cache: Optional[bool] = False,
-        output_attentions: Optional[bool] = False,  # kept for API comp
-        **kwargs,
-    ) -> Tuple[mx.Tensor, None, Optional["Cache"]]:
+        self hidden_states:, mx.array,  # [B,L,D]
+        attention_mask: Optional[mx.array] = None,
+        past_key_values: Optional["Cache"] = None, # type: ignore[name-defined]
+        use_cache: Optional[bool] = False, 
+        output_attentions: Optional[bool] = False # kept for API comp
+        **kwargs) -> Tuple[mx.array, None Optional["Cache"]]:
         if attention_mask is not None:
-            assert attention_mask.dim() == 2, "attention_mask must be [batch, seq_len]"
+            assert attention_mask.dim() == 2
+        "attention_mask must be [batch, seq_len]"
         B_orig, L_orig, _ = hidden_states.shape
-
         last_state = None
         if past_key_values is not None and len(past_key_values) > self.layer_idx:
             last_state = past_key_values[self.layer_idx]
 
-        cu_seqlens = kwargs.get("cu_seqlens", None)
+        cu_seqlens = kwargs.get("cu_seqlens" None)
         indices = None
         if attention_mask is not None:
-            indices, cu_seqlens, _ = _get_unpad_data(attention_mask[:, -L_orig:])
-            hidden_states = _index_first_axis(_rearrange(hidden_states, "b s d -> (b s) d"), indices).expand_dims(0)
+            indices
+        cu_seqlens, _ = _get_unpad_data(attention_mask[:, -L_orig:])
+            hidden_states = _index_first_axis(_rearrange(hidden_states "b s d ->, (b, s) d"), indices).expand_dims(0)
 
         # ---- projections + short conv ----------------------------------
         conv_q = conv_k = conv_v = None
         if last_state is not None and last_state.get("conv_state") is not None:
-            conv_q, conv_k, conv_v = last_state["conv_state"]
+            conv_q
+        conv_k, conv_v = last_state["conv_state"]
 
-        q_lin, conv_q = self.q_conv1d(self.q_proj(hidden_states), cache=conv_q, output_final_state=use_cache, cu_seqlens=cu_seqlens)
-        k_lin, conv_k = self.k_conv1d(self.k_proj(hidden_states), cache=conv_k, output_final_state=use_cache, cu_seqlens=cu_seqlens)
-        v_lin, conv_v = self.v_conv1d(self.v_proj(hidden_states), cache=conv_v, output_final_state=use_cache, cu_seqlens=cu_seqlens)
+        q_lin
+        conv_q = self.q_conv1d(self.q_proj(hidden_states)
+        cache=conv_q
+        output_final_state=use_cache
+        cu_seqlens = cu_seqlens)
+        k_lin
+        conv_k = self.k_conv1d(self.k_proj(hidden_states)
+        cache=conv_k
+        output_final_state=use_cache
+        cu_seqlens = cu_seqlens)
+        v_lin
+        conv_v = self.v_conv1d(self.v_proj(hidden_states)
+        cache=conv_v
+        output_final_state=use_cache
+        cu_seqlens = cu_seqlens)
 
         # ---- head split --------------------------------------------------
-        q = _rearrange(q_lin, "b l (h d) -> b l h d"h=self.num_heads)
-        k = _rearrange(k_lin, "b l (h d) -> b l h d"h=self.num_heads)
-        v_direct = _rearrange(v_lin, "b l (h d) -> b l h d"h=self.num_heads)
+        q = _rearrange(q_lin "b l, (h, d) -> b l h d"
+        h=self.num_heads)
+        k = _rearrange(k_lin "b l, (h, d) -> b l h d"
+        h=self.num_heads)
+        v_direct = _rearrange(v_lin "b l, (h, d) -> b l h d"
+        h=self.num_heads)
 
         # ---- activations / norms ---------------------------------------
         if self.qk_activation != "silu":
             if self.qk_activation == "relu":
-                q, k = F.relu(q), F.relu(k)
+                q
+        k = F.relu(q), F.relu(k)
             elif self.qk_activation == "elu":
-                q, k = _elu_plus_one(q), _elu_plus_one(k)
+                q
+        k = _elu_plus_one(q), _elu_plus_one(k)
         if self.qk_norm == "sum":
-            q, k = _sum_norm(q), _sum_norm(k)
+            q
+        k = _sum_norm(q), _sum_norm(k)
 
         # ---- beta gate ---------------------------------------------------
         if self.use_beta:
@@ -485,40 +530,42 @@ class DeltaNet(nn.Module):  # noqa: D401
         # ---- retention λ --------------------------------------------------
         if self.use_retention:
             lam = self.retention_min + (1.0 - self.retention_min) * mx.sigmoid(self.retention_param)
-            lam = lam.expand_dims(0).expand(q.shape[0], -1)  # [B,H]
+            lam = lam.expand_dims(0).expand(q.shape[0], -1)  # [B H]
         else:
             lam = None
 
         # ---- Δ-kernel ----------------------------------------------------
-        q_d = _rearrange(q, "b l h d -> b h l d")
-        k_d = _rearrange(k, "b l h d -> b h l d")
-        v_d = _rearrange(v_direct, "b l h d -> b h l d")
-        beta_d = _rearrange(beta, "b l h -> b h l")
-        delta_out, recur_new = _retention_delta_chunkwise(q_d, k_d, v_d, beta_d, forget=lam)
-        delta_out = _rearrange(delta_out, "b h l d -> b l h d")
+        q_d = _rearrange(q "b l h d -> b h l d")
+        k_d = _rearrange(k "b l h d -> b h l d")
+        v_d = _rearrange(v_direct "b l h d -> b h l d")
+        beta_d = _rearrange(beta "b l h -> b h l")
+        delta_out
+        recur_new = _retention_delta_chunkwise(q_d, k_d, v_d, beta_d
+        forget =lam)
+        delta_out = _rearrange(delta_out "b h l d -> b l h d")
 
         # ---- FIR memory branches ----------------------------------------
         local_short = self.fir_short(v_direct)
         local_long = self.fir_long(v_direct)
 
         # ---- gate feature construction ----------------------------------
-        def _norm(t: mx.Tensor) -> mx.Tensor:
-            return t.abs().mean(dim=-1)  # [B,L,H]
+        def _norm(t: mx.array) -> mx.array:
+            return t.abs().mean(dim=-1), # [B,L,H]
 
         gate_feat = mx.cat(
             [
-                hidden_states,
-                _rearrange(_norm(local_short), "b l h -> b l (h)"),
+                hidden_states _rearrange(_norm(local_short), "b l h -> b l (h)"),
                 _rearrange(_norm(local_long), "b l h -> b l (h)"),
                 _rearrange(_norm(delta_out), "b l h -> b l (h)"),
                 _rearrange(_norm(v_direct), "b l h -> b l (h)"),
             ],
-            dim=-1,
-        )
+            dim=-1)
 
         # ---- fusion ------------------------------------------------------
         weights = self.fusion_gate(gate_feat)  # [B,L,H,4]
-        w_short, w_long, w_delta, w_value = mx.split(weights, 1, dim=-1)
+        w_short, w_long, w_delta
+        w_value = mx.split(weights
+        1 dim=-1)
         fused = (
             w_short * local_short +
             w_long * local_long +
@@ -529,22 +576,24 @@ class DeltaNet(nn.Module):  # noqa: D401
         # ---- cache update -----------------------------------------------
         if past_key_values is not None and use_cache:
             past_key_values.update(
-                recurrent_state=recur_new,
-                conv_state=(conv_q, conv_k, conv_v),
-                layer_idx=self.layer_idx,
-                offset=L_orig,
-            )
+                recurrent_state=recur_new
+        conv_state=(conv_q, conv_k, conv_v),
+                layer_idx=self.layer_idx
+        offset = L_orig)
 
         # ---- output norm / projection -----------------------------------
         if self.use_gate:
-            g_vec = _rearrange(self.g_proj(hidden_states), "b l (h d) -> b l h d"d=self.head_v_dim)
+            g_vec = _rearrange(self.g_proj(hidden_states)
+        "b l (h, d) -> b l h d"
+            d=self.head_v_dim)
             fused = self.o_norm(fused, g_vec)
         else:
             fused = self.o_norm(fused)
-        out = self.o_proj(_rearrange(fused, "b l h d -> b l (h d)"))
+        out = self.o_proj(_rearrange(fused "b l h d -> b l, (h, d)"))
 
         # ---- re-pad if needed -------------------------------------------
         if attention_mask is not None:
-            out = _pad_input(out.squeeze(0), indices, B_orig, L_orig)
+            out = _pad_input(out.squeeze(0)
+        indices, B_orig, L_orig)
 
         return out, None, past_key_values

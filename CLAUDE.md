@@ -33,6 +33,44 @@ isort .
 mypy .
 ```
 
+### MLX Architecture Conversion System
+
+**Individual Architecture Conversion:**
+```bash
+# Interactive converter for fixing architectures one by one
+python src/convert_single_architecture.py
+
+# Commands available in the interactive mode:
+#   list                 - List all architectures and their status
+#   convert <index|name> - Convert a specific architecture  
+#   verify <name>        - Verify an MLX architecture
+#   fix <name>           - Attempt to fix an architecture
+#   show <name> [lines]  - Show architecture content
+#   status               - Show overall status summary
+#   quit                 - Exit
+```
+
+**Batch Architecture Conversion:**
+```bash
+# Convert all 106 architectures at once (may have issues)
+python src/pytorch_to_mlx_converter.py
+
+# Test all converted architectures
+python test_all_architectures.py
+```
+
+**Architecture Status:**
+- ✅ **Working**: Architecture converts and verifies successfully
+- ❌ **Broken**: Architecture has syntax/import/logic errors  
+- ⚪ **Not Converted**: Architecture not yet converted from PyTorch
+
+The single architecture converter allows you to:
+1. Convert PyTorch architectures one by one
+2. Verify syntax, imports, and structure
+3. Apply automatic fixes for common issues
+4. View architecture content and debug problems
+5. Track conversion progress
+
 ### Key Files
 
 - **`src/llm_asi_arch.py`** - Complete LLM-powered ASI-Arch reproduction (1000+ lines)
