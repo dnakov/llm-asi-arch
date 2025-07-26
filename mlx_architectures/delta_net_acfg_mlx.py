@@ -10,11 +10,10 @@ import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
+def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
     if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
@@ -373,8 +372,7 @@ class DeltaNet(nn.Module):
         output_attentions: Optional[bool] = False # kept for API compatibility
         **kwargs) -> Tuple[mx.array, None, Optional["Cache"]]:
         if attention_mask is not None:
-            assert attention_mask.ndim == 2 "attention_mask must be (batch
-        seq_len)"
+            assert attention_mask.ndim == 2, "attention_mask must be (batch, seq_len)"
         batch_size, seq_len_full, _ = hidden_states.shape
 
         # ---------------- cache retrieval ----------------

@@ -151,7 +151,7 @@ def sum_norm(x):
 # Causal chunked delta memory kernel
 # ---------------------------------------------
 @mx.compile
-def delta_rule_chunkwise
+def delta_rule_chunkwise(
     q: mx.array,
     k: mx.array,
     v: mx.array,
@@ -159,7 +159,7 @@ def delta_rule_chunkwise
     *,
     chunk_size: int = 32):
     b, h, L, d_k = q.shape
-        d_v = v.shape[-1]
+    d_v = v.shape[-1]
     pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
         q = mx.pad(q

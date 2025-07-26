@@ -10,11 +10,10 @@ import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
+def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
     if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
@@ -53,30 +52,30 @@ def _get_unpad_data(attention_mask):
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
 
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
+def _index_first_axis(tensor: mx.array, indices: mx.array) -> mx.array:
     """Index first axis"""
     return tensor[indices]
 
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
+def _pad_input(tensor: mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
     """Pad input back to original shape"""
     # Simplified version
     return tensor.reshape(batch_size, seq_len, -1)
 
 class _ShortConvolution(nn.Module):
     """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
+    def __init__(self, hidden_size: int,
+                 kernel_size: int = 4,
+                 activation: str = None,
+                 bias: bool = False):
         super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
+        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size,
+                              padding=kernel_size-1,
+                              bias=bias)
         self.activation = activation
         
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
+    def __call__(self, x, cache=None,
+                 output_final_state=False,
+                 cu_seqlens=None):
         # x: (B, L, D)
         x_conv = x.transpose(0, 2, 1)  # (B, D, L)
         out = self.conv(x_conv)
@@ -89,8 +88,7 @@ class _ShortConvolution(nn.Module):
             out = nn.gelu(out)
             
         if output_final_state:
-            return out
-        None  # Simplified - no cache state
+            return out, None  # Simplified - no cache state
         return out
 
 
