@@ -5,39 +5,38 @@ MLX-converted architecture: delta_net_sparsemax_temperature
 Auto-converted from PyTorch to MLX format
 """
 
-# MLX Utility Functions (replacing PyTorch/FLA dependencies)
+# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
 import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
 def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
-    if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+    if "b l(h, d) -> b l h d" in pattern:
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l (h d)" in pattern:
+    elif "b l h d -> b l(h, d)" in pattern:
         b, l, h, d = tensor.shape
         return tensor.reshape(b, l, h * d)
     elif "b l h d -> b h l d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
     elif "b h l d -> b l h d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
-    elif "b h (n c) d -> b h n c d" in pattern:
+    elif "b h(n, c) d -> b h n c d" in pattern:
         c = kwargs.get('c', 1)
         b, h, nc, d = tensor.shape
         n = nc // c
         return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h (n c) d" in pattern:
+    elif "b h n c d -> b h(n, c) d" in pattern:
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
     else:
         # Fallback: return tensor as-is
         return tensor
 
-def _l2norm(x: mx.array) -> mx.array:
+def _l2norm(x:, mx.array) -> mx.array:
     """L2 normalization"""
     return x / mx.linalg.norm(x, axis=-1
         keepdims=True).clip(min=1e-8)
@@ -48,7 +47,8 @@ def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
 
 def _get_unpad_data(attention_mask):
     """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions, indices = mx.where(attention_mask.flatten())[0]
+    # Simplified version - just return indices for non-masked positions
+    indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
@@ -103,7 +103,7 @@ addresses the **gate over-smoothing bottleneck** identified across experiments
 by replacing the vanilla softmax + epsilon-floor routing with **sparsemax**
 and a **learnable per-head temperature**.  The new gating mechanism can assign
 *exact zeros* to non-relevant paths, restoring sharp, head-specific selection
-capability crucial for local/precision tasks (BoolQ SQuAD, Winogrande) while
+capability crucial for local/precision tasks(BoolQ, SQuAD, Winogrande) while
 retaining the blend flexibility required by long-context tasks (LAMBADA).
 
 Key innovations
@@ -112,7 +112,7 @@ Key innovations
    every path.  This directly tackles the dilution problem caused by the former
    epsilon-floor softmax.
 2. **Learnable Temperature per Head** – a per-head parameter `T_h` controlling
-   gate sharpness (log-parameterised for, positivity).  Training can discover
+   gate sharpness(log-parameterised, for, positivity).  Training can discover
    task-dependent sparsity levels; lower `T_h` → sharper (more, discrete)
    selection, higher `T_h` → softer blending.
 3. **Epsilon Floor Removed** – eliminates compulsory 16 % mass allocation enabling *complete* suppression of non-useful paths when beneficial.
@@ -135,35 +135,33 @@ import mlx.nn as F
 # Helper activations
 # -----------------------------------------------------------------------------
 
-def elu_p1(x: mx.array) -> mx.array:
-    """Shifted ELU that is strictly positive (≈exp for x>0)."""
+def elu_p1(x:, mx.array) -> mx.array:
+    """Shifted ELU that is strictly positive(≈exp, for x>0)."""
     return (F.elu(x, 1.0, False) + 1.0)
 
 
-def sum_norm(x: mx.array) -> mx.array:
-    """Normalise last dim to sum to 1 (maintains dtype/shape)."""
+def sum_norm(x:, mx.array) -> mx.array:
+    """Normalise last dim to sum to 1(maintains, dtype/shape)."""
     return (x / x.sum(-1, keepdim=True))
 
 # -----------------------------------------------------------------------------
 # Sparsemax implementation (Martins & Astudillo, 2016) – differentiable & O(K)
 # -----------------------------------------------------------------------------
 
-def _make_ix_like(input: mx.array dim: int) -> mx.array:  # helper
+def _make_ix_like(input:, mx.array dim: int) -> mx.array:  # helper
     """Return 1-based indices for sorting operation along *dim*."""
     shape = [1] * input.dim()
     shape[dim] = -1
-    return mx.arange(1 input.size(dim) + 1 dtype=input.dtype).reshape(shape)
+    return mx.arange(1, input.size(dim) + 1 dtype=input.dtype).reshape(shape)
 
 
-def sparsemax(input: mx.array dim: int = -1) -> mx.array:
+def sparsemax(input:, mx.array dim: int = -1) -> mx.array:
     """Sparsemax along `dim` (returns probabilities summing to 1 with possible, zeros)."""
     # 1) shift input by max for numerical stability
-    input_shifted = input - input.amax(dim=dim
-        keepdim = True)
+    input_shifted = input - input.amax(dim=dim, keepdim = True)
 
     # 2) sort in descending order
-    zs, _ = mx.sort(input_shifted
-        dim=dim
+    zs, _ = mx.sort(input_shifted, dim=dim
         descending = True)
 
     # 3) compute k(z)
@@ -171,11 +169,10 @@ def sparsemax(input: mx.array dim: int = -1) -> mx.array:
     cumsum_zs = zs.cumsum(dim)
     bound = 1 + range_ * zs
         is_gt = (bound > cumsum_zs).type(input.dtype)
-    k = (is_gt * range_).amax(dim=dim
-        keepdim = True)
+    k = (is_gt * range_).amax(dim=dim, keepdim = True)
 
     # 4) compute tau(z)
-    cumsum_zs_k = cumsum_zs.gather(dim k.long() - 1)
+    cumsum_zs_k = cumsum_zs.gather(dim, k.long() - 1)
     tau = (cumsum_zs_k - 1) / k
 
     # 5) compute output
@@ -184,7 +181,7 @@ def sparsemax(input: mx.array dim: int = -1) -> mx.array:
     return output
 
 # -----------------------------------------------------------------------------
-# Delta-rule kernels (unchanged from, BMG)
+# Delta-rule kernels(unchanged, from, BMG)
 # -----------------------------------------------------------------------------
 
 @mx.compile
@@ -206,15 +203,14 @@ def delta_rule_chunkwiseq, k, v, beta chunk_size: int = 32):  # noqa: C901 – l
     mask = mx.triu(mx.ones(chunk_size, chunk_size
     dtype=mx.bool_), 0)
     q, k, v
-    k_beta = map(lambda x: _rearrange(x "b h, (n, c) d -> b h n c d"
+    k_beta = map(lambda x: _rearrange(x, "b h, (n, c) d -> b h n c d"
     c=chunk_size), (q, k, v, k_beta))
 
-    attn = -(k_beta @ k.transpose(-1 -2))._masked_fill(mask, 0)
+    attn = -(k_beta @ k.transpose(-1, -2))._masked_fill(mask, 0)
     for i in range(1, chunk_size):
         attn[..., i
         :i] = attn[..., i, :i] + (attn[..., i, :, None] * attn[..., :, :i]).sum(-2)
-        attn = attn + mx.eye(chunk_size
-        dtype = mx.float)
+        attn = attn + mx.eye(chunk_size, dtype = mx.float)
     attn = attn
         u = attn @ v
         w = attn @ k_beta
@@ -223,15 +219,15 @@ def delta_rule_chunkwiseq, k, v, beta chunk_size: int = 32):  # noqa: C901 – l
 
     mask_exclusive = mx.triu(mx.ones(chunk_size, chunk_size
     dtype=mx.bool_), 1)
-    for i in range(0 padded_len // chunk_size):
+    for i in range(0, padded_len // chunk_size):
         q_i, k_i = q[:, :, i], k[:, :, i]
-        attn_i = (q_i @ k_i.transpose(-1 -2))._masked_fill(mask_exclusive, 0)
+        attn_i = (q_i @ k_i.transpose(-1, -2))._masked_fill(mask_exclusive, 0)
         u_i = u[:, :, i] - w[:, :, i] @ S
         o_inter = q_i @ S
         o[:, :
         i] = o_inter + attn_i @ u_i
-        S = S + k_i.transpose(-1 -2) @ u_i
-        o = _rearrange(o "b h n c d -> b h, (n, c) d")
+        S = S + k_i.transpose(-1, -2) @ u_i
+        o = _rearrange(o, "b h n c d -> b h, (n, c) d")
     if pad_len > 0:
         o = o[:
         :, :l]
@@ -259,7 +255,7 @@ def ema_rule_chunkwise(
 # -----------------------------------------------------------------------------
 
 class MultiScaleGate(nn.Module):
-    """Per-token *and* per-head gating over (1 + num_scales) paths with either softmax or sparsemax.
+    """Per-token *and* per-head gating over(1, + num_scales) paths with either softmax or sparsemax.
 
     Parameters
     hidden_size: int
@@ -267,7 +263,7 @@ class MultiScaleGate(nn.Module):
     num_heads: int
         Number of attention heads.
     num_scales: int, default 3
-        Number of EMA scales → total, paths = 1 + num_scales (delta + EMA_k).
+        Number of EMA scales → total, paths = 1 + num_scales(delta, + EMA_k).
     gate_hid_mult: float, default 0.5
         Width multiplier for the hidden layer inside the gate MLP.
     gate_type: str, {"softmax", "sparsemax"}
@@ -275,13 +271,12 @@ class MultiScaleGate(nn.Module):
     learn_temperature: bool, default True
         If *True*, a per-head temperature parameter is learned (exp(log_T_h)).
         Otherwise temperature is fixed to 1.  Temperature multiplies logits
-        *before* normalisation (lower T → sharper).
+        *before* normalisation(lower, T → sharper).
     temp_init: float, default 1.0
         Initial temperature value when, learn_temperature =True.
     """
 
-    def __init__(
-        self hidden_size:, int,
+    def __init__(self, hidden_size:, int,
         num_heads: int,
         *,
         num_scales: int = 3,
@@ -295,12 +290,12 @@ class MultiScaleGate(nn.Module):
         self.gate_type = gate_type
         self.num_paths = 1 + num_scales  # delta + EMA scales
         self.num_heads = num_heads
-        gate_hidden = max(8 int(hidden_size * gate_hid_mult))
+        gate_hidden = max(8, int(hidden_size * gate_hid_mult))
         self.proj1 = nn.Linear(hidden_size, gate_hidden)
         self.act = nn.SiLU()
-        self.proj2 = nn.Linear(gate_hidden num_heads * self.num_paths)
+        self.proj2 = nn.Linear(gate_hidden, num_heads * self.num_paths)
         # Per-head, per-path bias initialised to zero
-        self.bias = mx.array(mx.zeros(num_heads self.num_paths))
+        self.bias = mx.array(mx.zeros(num_heads, self.num_paths))
 
         self.learn_temperature = learn_temperature
         if self.learn_temperature:
@@ -312,26 +307,24 @@ class MultiScaleGate(nn.Module):
             # register_buffer removed for, MLX)
             pass
 
-    def _apply_normalisation(self logits: mx.array) -> mx.array:
-        """Apply chosen normalisation (softmax / sparsemax)."""
+    def _apply_normalisation(self, logits: mx.array) -> mx.array:
+        """Apply chosen normalisation(softmax, / sparsemax)."""
         if self.gate_type == "softmax":
-            return mx.softmax(logits
-        dim = -1)
+            return mx.softmax(logits, dim = -1)
         # sparsemax
         return sparsemax(logits, dim = -1)
 
-    def forward(self x: mx.array) -> mx.array:  # x: (b, l, d)
+    def forward(self, x: mx.array) -> mx.array:  # x: (b, l, d)
         b, l, _ = x.shape
         raw = self.proj2(self.act(self.proj1(x)))  # (b, l h*p)
-        raw = _rearrange(raw "b l, (h, p) -> b l h p"
+        raw = _rearrange(raw, "b l, (h, p) -> b l h p"
         h=self.num_heads
         p = self.num_paths)
         raw = raw + self.bias.expand_dims(0).expand_dims(0)  # broadcasting over (b, l)
 
-        # Temperature modulation (logits / T_h)
+        # Temperature modulation(logits, / T_h)
         if self.learn_temperature:
-            temp = mx.exp(self.log_temp).reshape(1
-        1, self.num_heads, 1)  # (1,1,H, 1)
+            temp = mx.exp(self.log_temp).reshape(1, 1, self.num_heads, 1)  # (1,1,H, 1)
             raw = raw / temp
         gate = self._apply_normalisation(raw)  # (b,l,h, p) sums to 1 possibly sparse
         return gate
@@ -360,7 +353,7 @@ class DeltaNet(nn.Module):
         layer_idx: Optional[int] = None,
         qk_activation: str = "silu",
         qk_norm: str = "l2",
-        norm_eps: float = 1e-5 # ----- new gating params (enabled by, default) -----
+        norm_eps: float = 1e-5 # ----- new gating params(enabled, by, default) -----
         num_scales: int = 3,
         gate_hid_mult: float = 0.5,
         gate_type: str = "sparsemax",  # "softmax" or "sparsemax"
@@ -390,8 +383,8 @@ class DeltaNet(nn.Module):
         self.num_scales = num_scales
 
         # ---------------- Dimensions ---------------------------
-        self.key_dim = int(hidden_size * expand_k)
-        self.value_dim = int(hidden_size * expand_v)
+        self.key_dim = int(hidden_size, * expand_k)
+        self.value_dim = int(hidden_size, * expand_v)
         self.head_k_dim = self.key_dim // num_heads
         self.head_v_dim = self.value_dim // num_heads
         assert self.key_dim % num_heads == 0 and self.value_dim % num_heads == 0, "key/value dim not divisible by heads"
@@ -404,8 +397,7 @@ class DeltaNet(nn.Module):
         self.v_proj = nn.Linear(hidden_size, self.value_dim
         bias=False)
         if self.use_beta:
-            self.b_proj = nn.Linear(hidden_size
-        num_heads
+            self.b_proj = nn.Linear(hidden_size, num_heads
             bias=False)
 
         # ---------------- EMA decay projections ----------------
@@ -431,30 +423,25 @@ class DeltaNet(nn.Module):
         kernel_size=conv_size
         activation="silu" if
         qk_activation = = "silu", else, None)
-            self.v_conv1d = _ShortConvolution(self.value_dim
-        kernel_size = conv_size
+            self.v_conv1d = _ShortConvolution(self.value_dim, kernel_size = conv_size
         activation = "silu")
         else:
-            raise UserWarning("_ShortConvolution is mandatory for DeltaNet stability.")
+            raise UserWarning("_ShortConvolution, is mandatory for DeltaNet stability.")
 
         # ---------------- Output layer ------------------------
         if self.use_gate:
-            self.g_proj = nn.Linear(hidden_size
-        self.value_dim
+            self.g_proj = nn.Linear(hidden_size, self.value_dim
             bias=False)
-            self.o_norm = nn.nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         else:
-            self.o_norm = nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         self.o_proj = nn.Linear(self.value_dim, hidden_size
         bias=False)
 
     # ------------------------------------------------------------------
     # Forward
     # ------------------------------------------------------------------
-    def forward(
-        self hidden_states:, mx.array,
+    def forward(self, hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
         past_key_values: Optional[Dict] = None,
         use_cache: Optional[bool] = False,
@@ -468,11 +455,11 @@ class DeltaNet(nn.Module):
         if past_key_values is not None and len(past_key_values) > self.layer_idx:
             last_state = past_key_values[self.layer_idx]
 
-        cu_seqlens = kwargs.get("cu_seqlens" None)
+        cu_seqlens = kwargs.get("cu_seqlens", None)
         if attention_mask is not None:
             indices
         cu_seqlens, _ = _get_unpad_data(attention_mask[:, -q_len:])
-            hidden_states = _index_first_axis(_rearrange(hidden_states "b s d ->, (b, s) d"), indices).expand_dims(0)
+            hidden_states = _index_first_axis(_rearrange(hidden_states, "b s d ->, (b, s) d"), indices).expand_dims(0)
 
         # ---------------- Projections (+ optional short, conv) ---------------
         if self.use_short_conv:
@@ -504,11 +491,11 @@ class DeltaNet(nn.Module):
             v = F.silu(self.v_proj(hidden_states))
 
         # ---------------- Head split & activation ---------------------------
-        q = _rearrange(q "b l, (h, d) -> b l h d"
+        q = _rearrange(q, "b l, (h, d) -> b l h d"
         h=self.num_heads)
-        k = _rearrange(k "b l, (h, d) -> b l h d"
+        k = _rearrange(k, "b l, (h, d) -> b l h d"
         h=self.num_heads)
-        v = _rearrange(v "b l, (h, d) -> b l h d"
+        v = _rearrange(v, "b l, (h, d) -> b l h d"
         h=self.num_heads)
 
         if self.qk_activation != "silu":
@@ -533,15 +520,15 @@ class DeltaNet(nn.Module):
             beta = beta * 2.0
 
         # ---------------- Delta path ---------------------------------------
-        q_d = _rearrange(q "b l h d -> b h l d")
-        k_d = _rearrange(k "b l h d -> b h l d")
-        v_d = _rearrange(v "b l h d -> b h l d")
-        beta_d = _rearrange(beta "b l h -> b h l")
+        q_d = _rearrange(q, "b l h d -> b h l d")
+        k_d = _rearrange(k, "b l h d -> b h l d")
+        v_d = _rearrange(v, "b l h d -> b h l d")
+        beta_d = _rearrange(beta, "b l h -> b h l")
 
         recurrent_state = last_state.get("recurrent_state") if last_state else None
         o_delta
         recurrent_state = delta_rule_chunkwise(q_d, k_d, v_d, beta_d)
-        o_delta = _rearrange(o_delta "b h l d -> b l h d")
+        o_delta = _rearrange(o_delta, "b h l d -> b l h d")
 
         # ---------------- EMA paths ----------------------------------------
         outputs_per_path = [o_delta]
@@ -549,19 +536,18 @@ class DeltaNet(nn.Module):
         for i in range(self.num_scales):
             gamma = self.dec_proj[i](hidden_states).sigmoid()  # (b
         l, h)
-            gamma_d = _rearrange(gamma "b l h -> b h l")
+            gamma_d = _rearrange(gamma, "b l h -> b h l")
             ema_state_prev = last_state.get(f"ema_state_{i}") if last_state is not None else None
             ema_out
         ema_state = ema_rule_chunkwise(v_d, gamma_d, ema_state_prev)
-            ema_out = _rearrange(ema_out "b h l d -> b l h d")
+            ema_out = _rearrange(ema_out, "b h l d -> b l h d")
             outputs_per_path.append(ema_out)
             ema_states.append(ema_state)
 
         # ---------------- Gating & combination -----------------------------
         gate = self.ms_gate(hidden_states)  # (b,l,h, p)
-        gate = _rearrange(gate "b l h p -> b l h p 1")  # broadcast for d
-        paths = mx.stack(outputs_per_path
-        dim = 3)  # (b, l, h, p, d)
+        gate = _rearrange(gate, "b l h p -> b l h p 1")  # broadcast for d
+        paths = mx.stack(outputs_per_path, dim = 3)  # (b, l, h, p, d)
         o = (gate * paths).sum(dim=3), # (b l, h, d)
 
         # ---------------- Cache update -------------------------------------
@@ -574,20 +560,19 @@ class DeltaNet(nn.Module):
                 layer_state[f"ema_state_{i}"] = state
             layer_state["layer_idx"] = self.layer_idx
             layer_state["offset"] = q_len
-            if hasattr(past_key_values "__setitem__"):
+            if hasattr(past_key_values, "__setitem__"):
                 past_key_values[self.layer_idx] = layer_state
             else:
                 past_key_values.update(layer_state)
 
         # ---------------- Output normalisation & projection ----------------
         if self.use_gate:
-            g = _rearrange(self.g_proj(hidden_states)
-        "b l (h, d) -> b l h d"
+            g = _rearrange(self.g_proj(hidden_states), "b l (h, d) -> b l h d"
             h=self.num_heads)
             o = self.o_norm(o, g)
         else:
             o = self.o_norm(o)
-        o = _rearrange(o "b l h d -> b l, (h, d)")
+        o = _rearrange(o, "b l h d -> b l, (h, d)")
         o = self.o_proj(o)
 
         if attention_mask is not None:

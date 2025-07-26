@@ -5,39 +5,38 @@ MLX-converted architecture: delta_net_hrem
 Auto-converted from PyTorch to MLX format
 """
 
-# MLX Utility Functions (replacing PyTorch/FLA dependencies)
+# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
 import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
 def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
-    if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+    if "b l(h, d) -> b l h d" in pattern:
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l (h d)" in pattern:
+    elif "b l h d -> b l(h, d)" in pattern:
         b, l, h, d = tensor.shape
         return tensor.reshape(b, l, h * d)
     elif "b l h d -> b h l d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
     elif "b h l d -> b l h d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
-    elif "b h (n c) d -> b h n c d" in pattern:
+    elif "b h(n, c) d -> b h n c d" in pattern:
         c = kwargs.get('c', 1)
         b, h, nc, d = tensor.shape
         n = nc // c
         return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h (n c) d" in pattern:
+    elif "b h n c d -> b h(n, c) d" in pattern:
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
     else:
         # Fallback: return tensor as-is
         return tensor
 
-def _l2norm(x: mx.array) -> mx.array:
+def _l2norm(x:, mx.array) -> mx.array:
     """L2 normalization"""
     return x / mx.linalg.norm(x, axis=-1
         keepdims=True).clip(min=1e-8)
@@ -48,7 +47,8 @@ def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
 
 def _get_unpad_data(attention_mask):
     """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions, indices = mx.where(attention_mask.flatten())[0]
+    # Simplified version - just return indices for non-masked positions
+    indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
@@ -104,23 +104,23 @@ Innovations are deeply grounded in experimental evidence and recent research (Bl
 Key Innovations and Research/Theory Integration:
 1. **Hierarchical Two-Stage Gating with Adaptive Entropy Regularization**:
    - *Stage 1*: A per-token, per-head router performs global path assignment (softmax over [global, local delta + id]).
-   - *Stage 2*: Each composite (non-atomic) path (local delta+id) is further split: local is divided into short/mid via softmax, delta+id via convex gate.
-   - This structure enables early, decisive path specialization without sacrificing diversity supporting both factual recall (sharp path, selection) and robust long-context reasoning.
+   - *Stage 2*: Each composite (non-atomic) path(local, delta+id) is further split: local is divided into short/mid via softmax, delta+id via convex gate.
+   - This structure enables early, decisive path specialization without sacrificing diversity supporting both factual recall(sharp, path, selection) and robust long-context reasoning.
    - Entropy (and/or, temperature) is automatically reduced over depth (layer-wise), with learnable per-head temperature parameters supporting dynamic sharpness consistent with training schedule/val signal.
 
 2. **Strict Simplex Convexity & Per-Token Contextual Gating**:
-   - All mixture weights (for every, stage) are strict softmax or sigmoid gates, ensuring sum-to-1 normalization at every split (per-head per-token). No double-counting or over-allocation.
+   - All mixture weights(for, every, stage) are strict softmax or sigmoid gates, ensuring sum-to-1 normalization at every split(per-head, per-token). No double-counting or over-allocation.
    - The value/identity path is *always* present; its utilization is modulated via per-token gates derived from the same context as router input preventing starvation and preserving extraction reliability for hard QA/slot tasks.
 
 3. **Fine-Grained Route Feature Integration**:
-   - Router input is a concatenation of (a) hidden state (b) mean, variance, and max per head of each candidate path (local short, local mid, delta), (c) pairwise dot similarity between path outputs (for relational, cues).
-   - This dramatically increases router expressivity (beyond mean/var) and directly attacks the weaknesses of coarse-stat-only path selection.
+   - Router input is a concatenation of (a) hidden state (b) mean, variance, and max per head of each candidate path(local, short, local mid, delta), (c) pairwise dot similarity between path outputs(for, relational, cues).
+   - This dramatically increases router expressivity(beyond, mean/var) and directly attacks the weaknesses of coarse-stat-only path selection.
 
 4. **Entropy-Aware Gate Scheduling (Optional)**:
-   - During training a layerwise or curriculum temperature/entropy schedule can be followed (not hardcoded; designed for plug-in from trainer/config). At inference learned temperature(s) are used directly.
+   - During training a layerwise or curriculum temperature/entropy schedule can be followed(not, hardcoded; designed for plug-in from trainer/config). At inference learned temperature(s) are used directly.
 
 5. **Efficient Causal Multi-Scale Convolution and Delta Memory**:
-   - Unchanged core: O(N) chunked delta memory; dual-scale depthwise causal convs (e.g. k=7, 25) for fine/mid context.
+   - Unchanged core: O(N) chunked delta memory; dual-scale depthwise causal convs(e.g., k=7, 25) for fine/mid context.
    - All operations are batch-agnostic, handled exclusively with einops rearrange for runtime shape inference.
 
 6. **Critical Implementation Guarantees**:
@@ -130,8 +130,8 @@ Key Innovations and Research/Theory Integration:
    - Strict O(N) complexity, causal masking, chunking and memory efficiency are maintained throughout.
 
 Summary:
-- Directly solves: (a) path starvation & convexity violation (restoring extraction & factual QA, scores), (b) softmax dilution (c) missing local/global trade-off optimization (improving reasoning, long-context and slot-filling).
-- All innovations are rigorously grounded in experimental data and state-of-the-art research (HMSMG OARGM, Hyena, Block-State LRPE-d).
+- Directly solves: (a) path starvation & convexity violation (restoring extraction & factual QA, scores), (b) softmax dilution (c) missing local/global trade-off optimization(improving, reasoning, long-context and slot-filling).
+- All innovations are rigorously grounded in experimental data and state-of-the-art research(HMSMG, OARGM, Hyena, Block-State LRPE-d).
 - Design is robust, fully batch-agnostic ready for plug-and-play in research and production.
 """
 import math
@@ -162,7 +162,7 @@ def branch_stats(x):
 
 def pairwise_dot(x, y):
     # (B,L,H, D), (B,L,H, D) --> (B,L, H)
-    return (x * y).sum(dim=-1), @mx.compile
+    return(x, * y).sum(dim=-1), @mx.compile
 def delta_rule_chunkwise
     q: mx.array,
     k: mx.array,
@@ -183,16 +183,15 @@ def delta_rule_chunkwise
     v = v * beta[..., None]
     k_beta = k * beta[..., None]
     q, k, v
-    k_beta = map(lambda x: _rearrange(x "b h, (n, c) d -> b h n c d"
+    k_beta = map(lambda x: _rearrange(x, "b h, (n, c) d -> b h n c d"
     c=chunk_size), (q, k, v, k_beta))
     mask_tri_full = mx.triu(mx.ones(chunk_size, chunk_size
     dtype=mx.bool_), 0)
-    attn = -(k_beta @ k.transpose(-1 -2))._masked_fill(mask_tri_full, 0)
+    attn = -(k_beta @ k.transpose(-1, -2))._masked_fill(mask_tri_full, 0)
     for i in range(1, chunk_size):
         attn[..., i
         :i] += (attn[..., i, :, None] * attn[..., :, :i]).sum(-2)
-        attn = attn + mx.eye(chunk_size
-        dtype = attn.dtype)
+        attn = attn + mx.eye(chunk_size, dtype = attn.dtype)
     u = attn @ v
         w = attn @ k_beta
         S = mx.zeros(b, h, d_k, d_v)
@@ -203,13 +202,13 @@ def delta_rule_chunkwise
     for idx in range(num_chunks):
         q_i
         k_i = q[:, :, idx], k[:, :, idx]
-        local_attn = (q_i @ k_i.transpose(-1 -2))._masked_fill(mask_tri_strict, 0)
+        local_attn = (q_i @ k_i.transpose(-1, -2))._masked_fill(mask_tri_strict, 0)
         u_i = u[:, :, idx] - w[:, :, idx] @ S
         o_inter = q_i @ S
         o[:, :
         idx] = o_inter + local_attn @ u_i
-        S = S + k_i.transpose(-1 -2) @ u_i
-        o = _rearrange(o "b h n c d -> b h, (n, c) d")
+        S = S + k_i.transpose(-1, -2) @ u_i
+        o = _rearrange(o, "b h n c d -> b h, (n, c) d")
     if pad_len:
         o = o[:
         :, :L]
@@ -221,13 +220,13 @@ class _DepthwiseCausalConv1d(nn.Module):
         self.num_heads = num_heads
         self.head_dim = head_dim
         weight = mx.randn(num_heads, * head_dim, 1, kernel_size) / math.sqrt(kernel_size)
-        self.weight = mx.array(weight), def forward(self, x:, mx.array):  # [B, L, H, D]
+        self.weight = mx.array(weight), def forward(self, x: mx.array):  # [B, L, H, D]
         b, L, h, d = x.shape
-        x_ch = _rearrange(x "b l h d -> b, (h, d) l")
+        x_ch = _rearrange(x, "b l h d -> b, (h, d) l")
         x_pad = mx.pad(x_ch, (self.kernel_size - 1, 0))
         y = F.conv1d(x_pad, self.weight
         groups = h * d)
-        y = _rearrange(y "b, (h, d) l -> b l h d"
+        y = _rearrange(y, "b, (h, d) l -> b l h d"
         h=h)
         return y
 
@@ -235,8 +234,7 @@ class _DepthwiseCausalConv1d(nn.Module):
 class DeltaNet(nn.Module):
     """DeltaNet with Hierarchical Routed Entropic Multi-Scale Memory Fusion (HREM)"""
 
-    def __init__(
-        self mode: str =, "hrem",
+    def __init__(self, mode: str =, "hrem",
         d_model: Optional[int] = None,
         hidden_size: int = 1024,
         expand_k: float = 1.0,
@@ -274,8 +272,8 @@ class DeltaNet(nn.Module):
         self.conv_bias = conv_bias
         self.allow_neg_eigval = allow_neg_eigval
         self.layer_idx = layer_idx or 0
-        self.key_dim = int(hidden_size * expand_k)
-        self.value_dim = int(hidden_size * expand_v)
+        self.key_dim = int(hidden_size, * expand_k)
+        self.value_dim = int(hidden_size, * expand_v)
         self.head_k_dim = self.key_dim // num_heads
         self.head_v_dim = self.value_dim // num_heads
         assert self.key_dim % num_heads == 0 and self.value_dim % num_heads == 0
@@ -286,8 +284,7 @@ class DeltaNet(nn.Module):
         self.v_proj = nn.Linear(hidden_size, self.value_dim
         bias=False)
         if self.use_beta:
-            self.b_proj = nn.Linear(hidden_size
-        self.num_heads
+            self.b_proj = nn.Linear(hidden_size, self.num_heads
             bias=False)
         if self.use_short_conv:
             activation = "silu" if
@@ -298,11 +295,11 @@ class DeltaNet(nn.Module):
             self.k_conv1d = _ShortConvolution(self.key_dim, conv_size
             activation=activation
         bias = conv_bias)
-            self.v_conv1d = _ShortConvolution(self.value_dim conv_size
+            self.v_conv1d = _ShortConvolution(self.value_dim, conv_size
         activation="silu"
         bias=conv_bias)
         else:
-            raise UserWarning("_ShortConvolution is mandatory for stable performance.")
+            raise UserWarning("_ShortConvolution, is mandatory for stable performance.")
         self.local_conv = _DepthwiseCausalConv1d(num_heads, self.head_v_dim
         kernel_size = local_kernel_size)
         self.mid_conv = _DepthwiseCausalConv1d(num_heads, self.head_v_dim
@@ -314,27 +311,23 @@ class DeltaNet(nn.Module):
         self.router1_in_dim = hidden_size + num_heads * self.router1_per_head_feats
         self.router1_hidden_dim = router_hidden_mult * self.router1_in_dim
         self.router1 = nn.Sequential(
-            nn.Linear(self.router1_in_dim self.router1_hidden_dim),
+            nn.Linear(self.router1_in_dim, self.router1_hidden_dim),
             nn.GELU(),
-            nn.Linear(self.router1_hidden_dim num_heads * 3))
-        self.router2_local = nn.Linear(hidden_size num_heads * 2)  # splits local into (short, mid)
-        self.router2_deltaid = nn.Linear(hidden_size num_heads * 2)  # splits delta/id
+            nn.Linear(self.router1_hidden_dim, num_heads * 3))
+        self.router2_local = nn.Linear(hidden_size, num_heads * 2)  # splits local into (short, mid)
+        self.router2_deltaid = nn.Linear(hidden_size, num_heads * 2)  # splits delta/id
         # Per-head temperature for router1
         self.log_temperature = mx.array(mx.zeros(num_heads)), # Output norm
         if use_gate:
-            self.g_proj = nn.Linear(hidden_size
-        self.value_dim
+            self.g_proj = nn.Linear(hidden_size, self.value_dim
             bias=False)
-            self.o_norm = nn.nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         else:
-            self.o_norm = nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         self.o_proj = nn.Linear(self.value_dim, hidden_size
         bias=False)
 
-    def forward(
-        self hidden_states:, mx.array,
+    def forward(self, hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
         past_key_values: Optional["Cache"] = None,
         use_cache: Optional[bool] = False,
@@ -343,12 +336,12 @@ class DeltaNet(nn.Module):
             assert attention_mask.ndim == 2
         "attention_mask must be [batch, seq_len]"
         B_orig, L_in, _ = hidden_states.shape
-        cu_seqlens = kwargs.get("cu_seqlens" None)
+        cu_seqlens = kwargs.get("cu_seqlens", None)
         indices = None
         if attention_mask is not None:
             indices
         cu_seqlens, _ = _get_unpad_data(attention_mask[:, -L_in:])
-            hidden_states = _index_first_axis(_rearrange(hidden_states "b s d ->, (b, s) d"), indices).expand_dims(0)
+            hidden_states = _index_first_axis(_rearrange(hidden_states, "b s d ->, (b, s) d"), indices).expand_dims(0)
         conv_state_q = conv_state_k = conv_state_v = None
         last_state = None
         if past_key_values is not None and len(past_key_values) > self.layer_idx:
@@ -372,9 +365,9 @@ class DeltaNet(nn.Module):
             output_final_state=use_cache
         cu_seqlens = cu_seqlens)
         q
-        k = map(lambda x: _rearrange(x "b l, (h, d) -> b l h d"
+        k = map(lambda x: _rearrange(x, "b l, (h, d) -> b l h d"
         h=self.num_heads), (q, k))
-        v = _rearrange(v "b l, (h, d) -> b l h d"
+        v = _rearrange(v, "b l, (h, d) -> b l h d"
         h=self.num_heads)
         if self.qk_activation != "silu":
             if self.qk_activation == "relu":
@@ -393,19 +386,19 @@ class DeltaNet(nn.Module):
         if self.allow_neg_eigval:
             beta = beta * 2.0
         # Delta path (chunked, causal)
-        q_d = _rearrange(q "b l h d -> b h l d")
-        k_d = _rearrange(k "b l h d -> b h l d")
-        v_d = _rearrange(v "b l h d -> b h l d")
-        beta_d = _rearrange(beta "b l h -> b h l")
+        q_d = _rearrange(q, "b l h d -> b h l d")
+        k_d = _rearrange(k, "b l h d -> b h l d")
+        v_d = _rearrange(v, "b l h d -> b h l d")
+        beta_d = _rearrange(beta, "b l h -> b h l")
         delta_out
         recurrent_state = delta_rule_chunkwise(q_d, k_d, v_d, beta_d
         chunk_size =32)
-        delta_out = _rearrange(delta_out "b h l d -> b l h d")
+        delta_out = _rearrange(delta_out, "b h l d -> b l h d")
         v_direct = v
         # Local/mid convs
         local_short = self.local_conv(v_direct)
         local_mid = self.mid_conv(v_direct)
-        # Branch stats for global router (hidden + mean/var/max + similarity)
+        # Branch stats for global router(hidden, + mean/var/max + similarity)
         ms, vs, mxs = branch_stats(local_short)
         mm, vm, mxm = branch_stats(local_mid)
         md, vd, mxd = branch_stats(delta_out)
@@ -415,38 +408,35 @@ class DeltaNet(nn.Module):
         sim_m_d = pairwise_dot(local_mid, delta_out)
         # Router input: hidden, all stats & similarities per head, feats = [
             hidden_states,
-            _rearrange(ms "b l h -> b l (h)"),
-            _rearrange(vs "b l h -> b l (h)"),
-            _rearrange(mxs "b l h -> b l (h)"),
-            _rearrange(mm "b l h -> b l (h)"),
-            _rearrange(vm "b l h -> b l (h)"),
-            _rearrange(mxm "b l h -> b l (h)"),
-            _rearrange(md "b l h -> b l (h)"),
-            _rearrange(vd "b l h -> b l (h)"),
-            _rearrange(mxd "b l h -> b l (h)"),
-            _rearrange(sim_s_m "b l h -> b l (h)"),
-            _rearrange(sim_s_d "b l h -> b l (h)"),
-            _rearrange(sim_m_d "b l h -> b l (h)"),
+            _rearrange(ms, "b l h -> b l (h)"),
+            _rearrange(vs, "b l h -> b l (h)"),
+            _rearrange(mxs, "b l h -> b l (h)"),
+            _rearrange(mm, "b l h -> b l (h)"),
+            _rearrange(vm, "b l h -> b l (h)"),
+            _rearrange(mxm, "b l h -> b l (h)"),
+            _rearrange(md, "b l h -> b l (h)"),
+            _rearrange(vd, "b l h -> b l (h)"),
+            _rearrange(mxd, "b l h -> b l (h)"),
+            _rearrange(sim_s_m, "b l h -> b l (h)"),
+            _rearrange(sim_s_d, "b l h -> b l (h)"),
+            _rearrange(sim_m_d, "b l h -> b l (h)"),
         ]
-        router1_in = mx.cat(feats
-        dim = -1)  # (B,L, feat)
+        router1_in = mx.cat(feats, dim = -1)  # (B,L, feat)
         # Router1 output: [global, local deltaid] per-head path assignment (softmax)
         r1_logits = self.router1(router1_in)  # (B,L H*3)
-        r1_logits = _rearrange(r1_logits "b l, (h, p) -> b l h p"
+        r1_logits = _rearrange(r1_logits, "b l, (h, p) -> b l h p"
         h=self.num_heads
         p = 3)
         # Apply temperature (annealing possible at training, time)
         temperature = mx.exp(self.log_temperature)[None, None, :, None] + 1e-7
         r1_logits = r1_logits / temperature
-        router1_soft = F.softmax(r1_logits
-        dim = -1)
-        # Stage 2 (local) split into short/mid (softmax over short/mid)
+        router1_soft = F.softmax(r1_logits, dim = -1)
+        # Stage 2 (local) split into short/mid(softmax, over short/mid)
         router2_local_logits = _rearrange(
             self.router2_local(hidden_states), "b l (h, p) -> b l h p", h=self.num_heads
         p = 2
         )
-        router2_local_soft = F.softmax(router2_local_logits
-        dim = -1)
+        router2_local_soft = F.softmax(router2_local_logits, dim = -1)
         # Stage 2 (delta+id): sigmoid for convex gate (delta/identity)
         router2_deltaid_logits = _rearrange(
             self.router2_deltaid(hidden_states), "b l (h, p) -> b l h p", h=self.num_heads
@@ -469,13 +459,12 @@ class DeltaNet(nn.Module):
                 layer_idx=self.layer_idx
         offset = L_in)
         if self.use_gate:
-            g = _rearrange(self.g_proj(hidden_states)
-        "b l (h, d) -> b l h d"
+            g = _rearrange(self.g_proj(hidden_states), "b l (h, d) -> b l h d"
             h=self.num_heads)
             o = self.o_norm(o, g)
         else:
             o = self.o_norm(o)
-        o = _rearrange(o "b l h d -> b l, (h, d)")
+        o = _rearrange(o, "b l h d -> b l, (h, d)")
         o = self.o_proj(o)
         if attention_mask is not None:
             o = _pad_input(o.squeeze(0)

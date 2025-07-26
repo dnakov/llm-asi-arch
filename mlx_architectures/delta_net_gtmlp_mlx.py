@@ -5,39 +5,38 @@ MLX-converted architecture: delta_net_gtmlp
 Auto-converted from PyTorch to MLX format
 """
 
-# MLX Utility Functions (replacing PyTorch/FLA dependencies)
+# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
 import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
 def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
-    if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+    if "b l(h, d) -> b l h d" in pattern:
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l (h d)" in pattern:
+    elif "b l h d -> b l(h, d)" in pattern:
         b, l, h, d = tensor.shape
         return tensor.reshape(b, l, h * d)
     elif "b l h d -> b h l d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
     elif "b h l d -> b l h d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
-    elif "b h (n c) d -> b h n c d" in pattern:
+    elif "b h(n, c) d -> b h n c d" in pattern:
         c = kwargs.get('c', 1)
         b, h, nc, d = tensor.shape
         n = nc // c
         return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h (n c) d" in pattern:
+    elif "b h n c d -> b h(n, c) d" in pattern:
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
     else:
         # Fallback: return tensor as-is
         return tensor
 
-def _l2norm(x: mx.array) -> mx.array:
+def _l2norm(x:, mx.array) -> mx.array:
     """L2 normalization"""
     return x / mx.linalg.norm(x, axis=-1
         keepdims=True).clip(min=1e-8)
@@ -48,7 +47,8 @@ def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
 
 def _get_unpad_data(attention_mask):
     """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions, indices = mx.where(attention_mask.flatten())[0]
+    # Simplified version - just return indices for non-masked positions
+    indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
@@ -105,8 +105,7 @@ variants and state-of-the-art research on conditional routing :
 1.  **Per-Head Two-Layer MLP Gate**
     •  Each head owns an independent two-layer GELU MLP that receives
        the token hidden state **plus rich per-branch statistics**
-       (mean, power, abs-mean, L2) from all four memory pathways
-       (Short-FIR Long-FIR, Δ-rule direct, value).
+       (mean, power, abs-mean, L2) from all four memory pathways(Short-FIR, Long-FIR, Δ-rule direct, value).
     •  The head dimension is *folded into the batch* so only two small
        linear layers are required for *all* heads – parameter efficient
        yet fully decoupled.
@@ -119,7 +118,7 @@ variants and state-of-the-art research on conditional routing :
        gate sharpness can be learned end-to-end.
 
 3.  **Light Probability Floor (Optional)**
-    •  A tiny *global* floor ε (default `0.0`) can be enabled to ensure
+    •  A tiny *global* floor ε(default, `0.0`) can be enabled to ensure
        non-starvation of rarely used paths without imposing the strong
        leakage that hampered previous designs.
 
@@ -149,16 +148,13 @@ import mlx.nn as F
 # Helper statistics ----------------------------------------------------------
 # ----------------------------------------------------------------------------
 
-def _stat_features(t: mx.array) -> mx.array:
+def _stat_features(t:, mx.array) -> mx.array:
     """Return 4 scalar features per token & head [μ, power, |μ|, L2]."""
     # mean over feature dim
-    mean = t.mean(dim=-1
-        keepdim=True)
-    power = (t ** 2).mean(dim=-1
-        keepdim=True)
-    abs_mean = t.abs().mean(dim=-1
-        keepdim=True)
-    l2 = t.norm(dim=-1 keepdim=True)
+    mean = t.mean(dim=-1, keepdim=True)
+    power = (t ** 2).mean(dim=-1, keepdim=True)
+    abs_mean = t.abs().mean(dim=-1, keepdim=True)
+    l2 = t.norm(dim=-1, keepdim=True)
     return mx.cat([mean, power, abs_mean, l2], dim=-1)  # (B L,H, 4)
 
 
@@ -166,7 +162,7 @@ def _stat_features(t: mx.array) -> mx.array:
 # Depth-wise causal FIR convolution -----------------------------------------
 # ----------------------------------------------------------------------------
 class DepthwiseFIRConv1d(nn.Module):
-    """Depth-wise 1-D causal FIR convolution (per head/channel)."""
+    """Depth-wise 1-D causal FIR convolution(per, head/channel)."""
 
     def __init__(self, num_heads: int, head_dim: int, kernel_size: int = 5):
         super().__init__()
@@ -174,19 +170,18 @@ class DepthwiseFIRConv1d(nn.Module):
         # Small random filters (identity is given by value, path)
         self.filters = mx.array(mx.randn(num_heads, head_dim, self.kernel_size) * 0.02)
 
-    def forward(self x: mx.array) -> mx.array:  # x: (B,L,H, D)
+    def forward(self, x: mx.array) -> mx.array:  # x: (B,L,H, D)
         b, l, h, d = x.shape
-        x_f = _rearrange(x "b l h d -> b, (h, d) l")
-        weight = _rearrange(self.filters "h d k ->, (h, d) 1 k")
+        x_f = _rearrange(x, "b l h d -> b, (h, d) l")
+        weight = _rearrange(self.filters, "h d k ->, (h, d) 1 k")
         x_pad = mx.pad(x_f, (self.kernel_size - 1, 0))  # causal left pad
-        y = F.conv1d(x_pad
-        weight=weight
+        y = F.conv1d(x_pad, weight=weight
         groups = h * d)
-        return _rearrange(y "b, (h, d) l -> b l h d", h=h)
+        return _rearrange(y, "b, (h, d) l -> b l h d", h=h)
 
 
 # ----------------------------------------------------------------------------
-# Chunk-wise Δ-rule kernel (unchanged O(N)) ---------------------------------
+# Chunk-wise Δ-rule kernel(unchanged, O(N)) ---------------------------------
 # ----------------------------------------------------------------------------
 @mx.compile  # noqa: D401
 # pylint: disable=too-many-locals,too-many-statements
@@ -196,7 +191,7 @@ def delta_rule_chunkwise(q, k, v, beta chunk_size: int = 32):
     b, h, L, d_k = q.shape
         pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
-        pad_cfg = (0
+        pad_cfg = (0,
         0, 0, pad_len)
         q, k, v = (mx.pad(t, pad_cfg) for t in (q, k, v))
         beta = mx.pad(beta, (0, pad_len))
@@ -208,17 +203,16 @@ def delta_rule_chunkwise(q, k, v, beta chunk_size: int = 32):
     k_beta = k * beta[..., None]
 
     q, k, v, k_beta = map(
-        lambda x: _rearrange(x "b h, (n, c) d -> b h n c d", c=chunk_size),
+        lambda x: _rearrange(x, "b h, (n, c) d -> b h n c d", c=chunk_size),
         (q, k, v, k_beta))
 
     mask_chunk = mx.triu(mx.ones(chunk_size, chunk_size
     dtype=mx.bool_), 0)
-    attn = -(k_beta @ k.transpose(-1 -2))._masked_fill(mask_chunk, 0)
+    attn = -(k_beta @ k.transpose(-1, -2))._masked_fill(mask_chunk, 0)
     for i in range(1, chunk_size):
         attn[..., i
         :i] += (attn[..., i, :, None] * attn[..., :, :i]).sum(-2)
-        attn = attn + mx.eye(chunk_size
-        dtype = q.dtype)
+        attn = attn + mx.eye(chunk_size, dtype = q.dtype)
     attn = attn
         u = attn @ v
         w = attn @ k_beta
@@ -227,14 +221,14 @@ def delta_rule_chunkwise(q, k, v, beta chunk_size: int = 32):
 
     excl_mask = mx.triu(mx.ones(chunk_size, chunk_size
     dtype=mx.bool_), 1)
-    for idx in range(L_pad // chunk_size):
+    for idx in range(L_pad, // chunk_size):
         q_i, k_i = q[:, :, idx], k[:, :, idx]
-        attn_local = (q_i @ k_i.transpose(-1 -2))._masked_fill(excl_mask, 0)
+        attn_local = (q_i @ k_i.transpose(-1, -2))._masked_fill(excl_mask, 0)
         u_i = u[:, :, idx] - w[:, :, idx] @ S
         o[:, :
         idx] = q_i @ S + attn_local @ u_i
-        S = S + k_i.transpose(-1 -2) @ u_i
-        o = _rearrange(o "b h n c d -> b h, (n, c) d")
+        S = S + k_i.transpose(-1, -2) @ u_i
+        o = _rearrange(o, "b h n c d -> b h, (n, c) d")
     if pad_len:
         o = o[:
         :, :L]
@@ -246,8 +240,7 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
     """DeltaNet with Group-Temperature Per-Head MLP fusion gate (GTMLP)."""
 
     # ------------------------------------------------------------------
-    def __init__(
-        self mode: str =, "gtmlp",
+    def __init__(self, mode: str =, "gtmlp",
         d_model: Optional[int] = None,
         hidden_size: int = 1024,
         expand_k: float = 1.0,
@@ -290,7 +283,7 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         self.layer_idx = layer_idx
         self.qk_activation = qk_activation
         self.qk_norm = qk_norm
-        self.group_size = max(1 int(group_size))
+        self.group_size = max(1, int(group_size))
         self.min_floor = float(min_floor)
 
         assert qk_activation in {"silu", "relu", "elu", "identity"}
@@ -298,12 +291,12 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         assert num_heads % self.group_size == 0 "num_heads must be divisible by group_size"
 
         # ---- dimensions ----
-        self.key_dim = int(hidden_size * expand_k)
-        self.value_dim = int(hidden_size * expand_v)
+        self.key_dim = int(hidden_size, * expand_k)
+        self.value_dim = int(hidden_size, * expand_v)
         self.head_k_dim = self.key_dim // num_heads
         self.head_v_dim = self.value_dim // num_heads
         if self.key_dim % num_heads or self.value_dim % num_heads:
-            raise ValueError("key/value dims must divide num_heads")
+            raise ValueError("key/value, dims must divide num_heads")
 
         # ---- projections ----
         self.q_proj = nn.Linear(hidden_size, self.key_dim
@@ -313,7 +306,7 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         self.v_proj = nn.Linear(hidden_size, self.value_dim
         bias=False)
         if self.use_beta:
-            self.b_proj = nn.Linear(hidden_size num_heads
+            self.b_proj = nn.Linear(hidden_size, num_heads
         bias = False)
 
         # ---- short conv preprocessing ----
@@ -326,11 +319,11 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
             self.k_conv1d = _ShortConvolution(self.key_dim, conv_size
             activation=act
         bias = conv_bias)
-            self.v_conv1d = _ShortConvolution(self.value_dim conv_size
+            self.v_conv1d = _ShortConvolution(self.value_dim, conv_size
         activation="silu"
         bias=conv_bias)
         else:
-            raise UserWarning("_ShortConvolution is mandatory for DeltaNet-GTMLP.")
+            raise UserWarning("_ShortConvolution, is mandatory for DeltaNet-GTMLP.")
 
         # ---- depth-wise FIR conv branches ----
         self.fir_short = DepthwiseFIRConv1d(num_heads, self.head_v_dim
@@ -342,7 +335,7 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         branch_stat_dim = 4  # stats per branch per head (scalar, features)
         branches = 4  # short, long, delta, value
         gate_input_dim = hidden_size + branch_stat_dim * branches
-        gate_hidden_dim = max(8 int(gate_input_dim * gate_hidden_mult))
+        gate_hidden_dim = max(8, int(gate_input_dim * gate_hidden_mult))
 
         self.gate_fc1 = nn.Linear(gate_input_dim, gate_hidden_dim
         bias=True)
@@ -353,7 +346,8 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         with mx.disable_grad():
             self.gate_fc2.bias[:] = mx.tensor([-0.5, -0.5, 0.5 1.5])
 
-        # group-wise temperature, num_groups = num_heads // self.group_size
+        # group-wise temperature
+    num_groups = num_heads // self.group_size
         self.log_tau = mx.array(mx.zeros(num_groups)), # τ ≈ 1.0 initially
 
         # optional global floor
@@ -361,14 +355,11 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
 
         # ---- output norm & projection ----
         if use_gate:
-            self.g_proj = nn.Linear(hidden_size
-        self.value_dim
+            self.g_proj = nn.Linear(hidden_size, self.value_dim
             bias=False)
-            self.o_norm = nn.nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         else:
-            self.o_norm = nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         self.o_proj = nn.Linear(self.value_dim, hidden_size
         bias=False)
 
@@ -384,19 +375,18 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         **kwargs) -> Tuple[mx.array, None, Optional["Cache"]]:
 
         if attention_mask is not None:
-            assert attention_mask.ndim == 2 "attention_mask must be (batch
-        seq_len)"
+            assert attention_mask.ndim == 2 "attention_mask must be(batch, seq_len)"
         B0, L0, _ = hidden_states.shape
         last_state = None
         if past_key_values is not None and self.layer_idx is not None and len(past_key_values) > self.layer_idx:
             last_state = past_key_values[self.layer_idx]
 
-        cu_seqlens = kwargs.get("cu_seqlens" None)
+        cu_seqlens = kwargs.get("cu_seqlens", None)
         indices = None
         if attention_mask is not None:
             indices
         cu_seqlens, _ = _get_unpad_data(attention_mask[:, -L0:])
-            hidden_states = _index_first_axis(_rearrange(hidden_states "b s d ->, (b, s) d"), indices).expand_dims(0)
+            hidden_states = _index_first_axis(_rearrange(hidden_states, "b s d ->, (b, s) d"), indices).expand_dims(0)
 
         # ---- projections and short conv ----
         conv_q = conv_k = conv_v = None
@@ -409,27 +399,24 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         v_lin = self.v_proj(hidden_states)
 
         q
-        conv_q = self.q_conv1d(q_lin
-        cache=conv_q
+        conv_q = self.q_conv1d(q_lin, cache=conv_q
         output_final_state=use_cache
         cu_seqlens = cu_seqlens)
         k
-        conv_k = self.k_conv1d(k_lin
-        cache=conv_k
+        conv_k = self.k_conv1d(k_lin, cache=conv_k
         output_final_state=use_cache
         cu_seqlens = cu_seqlens)
         v
-        conv_v = self.v_conv1d(v_lin
-        cache=conv_v
+        conv_v = self.v_conv1d(v_lin, cache=conv_v
         output_final_state=use_cache
         cu_seqlens = cu_seqlens)
 
         # ---- head split & activation ----
-        q = _rearrange(q "b l, (h, d) -> b l h d"
+        q = _rearrange(q, "b l, (h, d) -> b l h d"
         d=self.head_k_dim)
-        k = _rearrange(k "b l, (h, d) -> b l h d"
+        k = _rearrange(k, "b l, (h, d) -> b l h d"
         d=self.head_k_dim)
-        v = _rearrange(v "b l, (h, d) -> b l h d"
+        v = _rearrange(v, "b l, (h, d) -> b l h d"
         d=self.head_v_dim)
 
         if self.qk_activation != "silu":
@@ -441,10 +428,8 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         k = (F.elu(q, 1.0, False) + 1.0), (F.elu(k, 1.0, False) + 1.0)
             # identity handled implicitly
         if self.qk_norm == "sum":
-            q = q / q.sum(-1
-        keepdim=True)
-            k = k / k.sum(-1
-        keepdim=True)
+            q = q / q.sum(-1, keepdim=True)
+            k = k / k.sum(-1, keepdim=True)
 
         v_direct = v  # value path
 
@@ -457,13 +442,13 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
             beta = beta * 2.0
 
         # Δ-rule computation
-        q_d = _rearrange(q "b l h d -> b h l d")
-        k_d = _rearrange(k "b l h d -> b h l d")
-        v_d = _rearrange(v "b l h d -> b h l d")
-        beta_d = _rearrange(beta "b l h -> b h l")
+        q_d = _rearrange(q, "b l h d -> b h l d")
+        k_d = _rearrange(k, "b l h d -> b h l d")
+        v_d = _rearrange(v, "b l h d -> b h l d")
+        beta_d = _rearrange(beta, "b l h -> b h l")
         delta_out
         recurrent_state = delta_rule_chunkwise(q_d, k_d, v_d, beta_d)
-        delta_out = _rearrange(delta_out "b h l d -> b l h d")
+        delta_out = _rearrange(delta_out, "b h l d -> b l h d")
 
         # FIR branches
         fir_short = self.fir_short(v_direct)
@@ -483,12 +468,12 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         ], dim=-1)  # (B,L,H D+16)
 
         B, L, H, Fin = gate_in.shape
-        gate_in_flat = _rearrange(gate_in "b l h f -> (b, l, h) f")
+        gate_in_flat = _rearrange(gate_in, "b l h f -> (b, l, h) f")
 
         # ---- per-head MLP (parameters shared head folded into, batch) ----
         x = F.gelu(self.gate_fc1(gate_in_flat))
         logits = self.gate_fc2(x)  # (B*L*H, 4)
-        logits = _rearrange(logits "(b, l, h) c -> b l h c"
+        logits = _rearrange(logits, "(b, l, h) c -> b l h c"
         b=B
         l=L
         h = H)
@@ -502,12 +487,10 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         tau_per_head = tau[group_ids]  # (H)
         logits = logits / tau_per_head.reshape(1, 1, H, 1)
 
-        probs = mx.softmax(logits
-        dim = -1)
+        probs = mx.softmax(logits, dim = -1)
         if self.min_floor > 0.0:
             probs = probs.clamp(min=self.min_floor)
-        probs = probs / probs.sum(dim=-1
-        keepdim=True)
+        probs = probs / probs.sum(dim=-1, keepdim=True)
 
         # ---- fuse outputs ----
         o = (
@@ -526,13 +509,12 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
 
         # ---- output norm & projection ----
         if self.use_gate:
-            g_vec = _rearrange(self.g_proj(hidden_states)
-        "b l (h, d) -> b l h d"
+            g_vec = _rearrange(self.g_proj(hidden_states), "b l (h, d) -> b l h d"
             d=self.head_v_dim)
             o = self.o_norm(o, g_vec)
         else:
             o = self.o_norm(o)
-        o = _rearrange(o "b l h d -> b l, (h, d)")
+        o = _rearrange(o, "b l h d -> b l, (h, d)")
         o = self.o_proj(o)
 
         # ---- re-pad if we unpadded earlier ----

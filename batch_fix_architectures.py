@@ -1,171 +1,130 @@
 #!/usr/bin/env python3
 """
-Batch Architecture Syntax Fixer
-===============================
+Batch Architecture Fixer
+========================
 
-Applies targeted fixes for the 5 most common syntax error patterns 
-identified across all 106 MLX architecture files.
+Applies systematic fixes to all MLX architectures based on common error patterns.
 """
 
-import os
 import re
+import os
 from pathlib import Path
-from typing import Dict, List
+from typing import List, Tuple
+import ast
 
-def fix_architecture_file(filepath: Path) -> Dict:
-    """Apply all common syntax fixes to a single architecture file"""
-    with open(filepath, 'r') as f:
-        original_content = f.read()
+def apply_common_fixes(code: str) -> str:
+    """Apply common syntax fixes to architecture code"""
     
-    content = original_content
-    fixes_applied = []
-    
-    # Fix 1: Type annotation syntax errors
+    # Fix 1: Type annotations with extra commas
     # Pattern: "tensor:, mx.array" -> "tensor: mx.array"
-    pattern1 = r'(\w+):\s*,\s*(mx\.\w+)'
-    if re.search(pattern1, content):
-        content = re.sub(pattern1, r'\1: \2', content)
-        fixes_applied.append("Fixed type annotation syntax")
+    code = re.sub(r'(\w+):\s*,\s*(mx\.\w+)', r'\1: \2', code)
     
-    # Fix 2: kwargs.get missing commas
-    # Pattern: "kwargs.get('h'\nkwargs.get('d', 1))" -> "kwargs.get('h', kwargs.get('d', 1))"
-    pattern2 = r"kwargs\.get\s*\(\s*['\"]([^'\"]+)['\"]\s*\n\s*kwargs\.get\s*\(\s*['\"]([^'\"]+)['\"],\s*([^)]+)\)\)"
-    if re.search(pattern2, content):
-        content = re.sub(pattern2, r"kwargs.get('\1', kwargs.get('\2', \3))", content)
-        fixes_applied.append("Fixed kwargs.get missing commas")
+    # Fix 2: Function parameter definitions missing commas
+    # Pattern: "def func(self param:" -> "def func(self, param:"
+    code = re.sub(r'def\s+(\w+)\s*\(\s*self\s+([^,)]+)', r'def \1(self, \2', code)
     
-    # Fix 3: Function parameters missing commas
-    # Fix __init__ and __call__ method parameters spread across lines
-    # Pattern: parameters on separate lines without commas
-    init_pattern = r'def __init__\(self,([^)]*?)(\n\s*\w+:\s*[^,\n)]+)(\n\s*\w+:\s*[^,\n)]+)*(\n\s*\w+:\s*[^,\n)]+)*\):'
-    matches = list(re.finditer(init_pattern, content, re.MULTILINE | re.DOTALL))
-    for match in reversed(matches):  # Process in reverse to maintain positions
-        full_match = match.group(0)
-        # Add commas to parameters that don't have them
-        fixed_params = re.sub(r'(\w+:\s*[^,\n)]+)(\n\s*)(\w+:)', r'\1,\2\3', full_match)
-        if fixed_params != full_match:
-            content = content[:match.start()] + fixed_params + content[match.end():]
-            fixes_applied.append("Fixed function parameter commas")
+    # Fix 3: Broken comment lines with code
+    # Pattern: "# comment, actual_code" -> "# comment\n    actual_code"
+    code = re.sub(r'#\s*([^,\n]+),\s*(\w+\s*=)', r'# \1\n    \2', code)
     
-    # Fix 4: Conv1d and other function calls missing commas
-    # Pattern: "nn.Conv1d(a, b, c\npadding=d\nbias=e)" -> "nn.Conv1d(a, b, c, padding=d, bias=e)"
-    conv_pattern = r'nn\.Conv1d\s*\([^)]*?(\n\s*\w+\s*=\s*[^,\n)]+)(\n\s*\w+\s*=\s*[^,\n)]+)*\)'
-    matches = list(re.finditer(conv_pattern, content, re.MULTILINE | re.DOTALL))
-    for match in reversed(matches):
-        full_match = match.group(0)
-        # Add commas before parameters on new lines
-        fixed_call = re.sub(r'([^,\s])(\n\s*)(\w+\s*=)', r'\1,\2\3', full_match)
-        if fixed_call != full_match:
-            content = content[:match.start()] + fixed_call + content[match.end():]
-            fixes_applied.append("Fixed function call commas")
+    # Fix 4: _rearrange calls missing commas
+    # Pattern: "_rearrange(tensor "pattern"" -> "_rearrange(tensor, "pattern""
+    code = re.sub(r'_rearrange\s*\(\s*([^,\s]+)\s+"([^"]+)"', r'_rearrange(\1, "\2"', code)
     
-    # Fix 5: Unterminated string literals in assert statements
-    # Pattern: 'assert condition "message\n more text"' -> 'assert condition, "message more text"'
-    assert_pattern = r'assert\s+([^"\']+?)\s+"([^"]*?)"\s*\n\s*([^"]*?)"'
-    matches = list(re.finditer(assert_pattern, content, re.MULTILINE | re.DOTALL))
-    for match in reversed(matches):
-        condition = match.group(1).strip()
-        message_part1 = match.group(2)
-        message_part2 = match.group(3)
-        complete_message = f"{message_part1} {message_part2}".strip()
-        fixed_assert = f'assert {condition}, "{complete_message}"'
-        content = content[:match.start()] + fixed_assert + content[match.end():]
-        fixes_applied.append("Fixed unterminated string in assert")
+    # Fix 5: Function calls with missing commas between parameters
+    # Pattern: "func(param1 param2," -> "func(param1, param2,"
+    code = re.sub(r'([a-zA-Z_]\w*)\s*\(\s*([^,\s()]+)\s+([^,\s()]+)\s*,', r'\1(\2, \3,', code)
     
-    # Fix 6: Simpler assert pattern
-    # Pattern: 'assert condition "message' -> 'assert condition, "message"'
-    simple_assert_pattern = r'assert\s+([^"\']+?)\s+"([^"]*?)$'
-    matches = list(re.finditer(simple_assert_pattern, content, re.MULTILINE))
-    for match in reversed(matches):
-        condition = match.group(1).strip()
-        message = match.group(2)
-        fixed_assert = f'assert {condition}, "{message}"'
-        content = content[:match.start()] + fixed_assert + content[match.end():]
-        fixes_applied.append("Fixed assert statement syntax")
+    # Fix 6: mx.array creation with trailing commas
+    # Pattern: "mx.array(data)," -> "mx.array(data)"
+    code = re.sub(r'mx\.array\(([^)]+)\)\s*,\s*#', r'mx.array(\1)  #', code)
     
-    # Fix 7: Standalone None statements
-    # Pattern: "return something\nNone\nreturn other" -> "return something, None"
-    none_pattern = r'(\s+return\s+[^,\n]+)\s*\n\s*None\s*#[^\n]*\n\s*return\s+'
-    if re.search(none_pattern, content):
-        content = re.sub(none_pattern, r'\1, None  # Simplified - no cache state\n        return ', content)
-        fixes_applied.append("Fixed standalone None statements")
+    # Fix 7: F.elu and similar function calls
+    # Pattern: "F.elu(x 1.0, False)" -> "F.elu(x, 1.0, False)"
+    code = re.sub(r'F\.elu\s*\(\s*([^,\s()]+)\s+([^,\s()]+)\s*,\s*([^)]+)\)', r'F.elu(\1, \2, \3)', code)
     
-    # Fix 8: Missing commas in function calls with parameters spread across lines
-    # Pattern: "function(param1\nparam2)" -> "function(param1, param2)"
-    func_call_pattern = r'(\w+)\s*\(\s*([^,\n)]+)\s*\n\s*([^,\n)]+)\s*\)'
-    matches = list(re.finditer(func_call_pattern, content, re.MULTILINE))
-    for match in reversed(matches):
-        func_name = match.group(1)
-        param1 = match.group(2).strip()
-        param2 = match.group(3).strip()
-        fixed_call = f'{func_name}({param1}, {param2})'
-        content = content[:match.start()] + fixed_call + content[match.end():]
-        fixes_applied.append("Fixed function call missing commas")
+    # Fix 8: Missing commas in function calls (general pattern)
+    # Pattern: "func(arg1 arg2)" -> "func(arg1, arg2)"
+    code = re.sub(r'(\w+)\s*\(\s*([^,\s()]+)\s+([^,)]+)\)', r'\1(\2, \3)', code)
     
-    # Save the file if changes were made
-    if content != original_content:
-        with open(filepath, 'w') as f:
-            f.write(content)
-        return {
-            'success': True,
-            'fixes_applied': fixes_applied,
-            'fixes_count': len(fixes_applied)
-        }
-    else:
-        return {
-            'success': False,
-            'fixes_applied': [],
-            'fixes_count': 0
-        }
+    # Fix 9: Tuple unpacking issues
+    # Pattern: "pad = (0\n        0, 0, val)" -> "pad = (0,\n        0, 0, val)"
+    code = re.sub(r'\(\s*(\d+)\s*\n\s*(\d+)', r'(\1,\n        \2', code)
+    
+    # Fix 10: Remove device references
+    code = re.sub(r'\.device\b', '', code)
+    code = re.sub(r',\s*device=[^,)]+', '', code)
+    code = re.sub(r'device=[^,)]+,\s*', '', code)
+    
+    # Fix 11: kwargs.get calls
+    # Pattern: "kwargs.get('a' kwargs.get('b'" -> "kwargs.get('a', kwargs.get('b'"
+    code = re.sub(r"kwargs\.get\s*\(\s*'([^']+)'\s+kwargs\.get\s*\(\s*'([^']+)',\s*([^)]+)\)\)", 
+                  r"kwargs.get('\1', kwargs.get('\2', \3))", code)
+    
+    return code
+
+def fix_architecture_file(filepath: Path) -> Tuple[bool, str]:
+    """Fix a single architecture file"""
+    try:
+        with open(filepath, 'r') as f:
+            original_code = f.read()
+        
+        # Apply fixes
+        fixed_code = apply_common_fixes(original_code)
+        
+        # Test syntax
+        try:
+            ast.parse(fixed_code)
+            syntax_valid = True
+            error_msg = ""
+        except SyntaxError as e:
+            syntax_valid = False
+            error_msg = f"Syntax error on line {e.lineno}: {e.msg}"
+        
+        # Save if improved
+        if fixed_code != original_code:
+            with open(filepath, 'w') as f:
+                f.write(fixed_code)
+            return syntax_valid, f"Fixed and saved. {error_msg if not syntax_valid else 'Syntax valid!'}"
+        else:
+            return syntax_valid, f"No changes made. {error_msg if not syntax_valid else 'Already valid!'}"
+    
+    except Exception as e:
+        return False, f"Error processing file: {e}"
 
 def main():
-    """Apply fixes to all architecture files"""
+    """Fix all architecture files"""
     mlx_dir = Path("mlx_architectures")
-    
-    if not mlx_dir.exists():
-        print(f"❌ Directory {mlx_dir} not found!")
-        return False
-    
     arch_files = list(mlx_dir.glob("*_mlx.py"))
-    if not arch_files:
-        print(f"❌ No MLX architecture files found in {mlx_dir}")
-        return False
     
-    print(f"🔧 Applying batch fixes to {len(arch_files)} architecture files...")
+    print(f"🔧 Batch fixing {len(arch_files)} architecture files...")
+    print("=" * 60)
     
     fixed_count = 0
-    total_fixes = 0
-    results = {}
+    syntax_valid_count = 0
     
-    for i, filepath in enumerate(arch_files, 1):
-        arch_name = filepath.stem.replace('_mlx', '')
-        print(f"[{i:3d}/{len(arch_files)}] Processing {arch_name}...")
+    for filepath in sorted(arch_files):
+        name = filepath.stem.replace('_mlx', '')
+        syntax_valid, message = fix_architecture_file(filepath)
         
-        try:
-            result = fix_architecture_file(filepath)
-            results[arch_name] = result
-            
-            if result['success']:
-                fixed_count += 1
-                total_fixes += result['fixes_count']
-                print(f"  ✅ Applied {result['fixes_count']} fixes")
-                for fix in result['fixes_applied']:
-                    print(f"     - {fix}")
-            else:
-                print(f"  ℹ️  No fixes needed")
-                
-        except Exception as e:
-            print(f"  ❌ Error: {e}")
-            results[arch_name] = {'success': False, 'error': str(e)}
+        status = "✅" if syntax_valid else "❌"
+        print(f"{status} {name}: {message}")
+        
+        if "Fixed and saved" in message:
+            fixed_count += 1
+        if syntax_valid:
+            syntax_valid_count += 1
     
-    print(f"\n📊 Batch Fix Summary:")
-    print(f"Files processed: {len(arch_files)}")
-    print(f"Files modified: {fixed_count}")
-    print(f"Total fixes applied: {total_fixes}")
-    print(f"Success rate: {fixed_count/len(arch_files)*100:.1f}%")
+    print("=" * 60)
+    print(f"📊 Summary:")
+    print(f"   Files processed: {len(arch_files)}")
+    print(f"   Files modified: {fixed_count}")
+    print(f"   Syntax valid: {syntax_valid_count}/{len(arch_files)} ({syntax_valid_count/len(arch_files)*100:.1f}%)")
     
-    return fixed_count > 0
+    if syntax_valid_count == len(arch_files):
+        print("🎉 All architectures are now syntax valid!")
+    else:
+        print(f"⚠️  {len(arch_files) - syntax_valid_count} architectures still need manual fixes")
 
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    main()

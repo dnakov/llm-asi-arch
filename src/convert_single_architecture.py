@@ -345,7 +345,9 @@ class SingleArchitectureConverter:
             print(f"{i:3}: {line}")
         
         if len(content.split('\n')) > lines:
-            print(f"... ({len(content.split('\n')) - lines} more lines)")
+            total_lines = len(content.split('\n'))
+            remaining_lines = total_lines - lines
+            print(f"... ({remaining_lines} more lines)")
     
     def get_status_summary(self) -> Dict:
         """Get overall status summary"""

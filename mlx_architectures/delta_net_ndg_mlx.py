@@ -5,39 +5,38 @@ MLX-converted architecture: delta_net_ndg
 Auto-converted from PyTorch to MLX format
 """
 
-# MLX Utility Functions (replacing PyTorch/FLA dependencies)
+# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
 import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
 def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
-    if "b l (h d) -> b l h d" in pattern:
-        h = kwargs.get('h'
-        kwargs.get('d', 1))
+    if "b l(h, d) -> b l h d" in pattern:
+        h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
         d = hd // h
         return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l (h d)" in pattern:
+    elif "b l h d -> b l(h, d)" in pattern:
         b, l, h, d = tensor.shape
         return tensor.reshape(b, l, h * d)
     elif "b l h d -> b h l d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
     elif "b h l d -> b l h d" in pattern:
         return tensor.transpose(0, 2, 1, 3)
-    elif "b h (n c) d -> b h n c d" in pattern:
+    elif "b h(n, c) d -> b h n c d" in pattern:
         c = kwargs.get('c', 1)
         b, h, nc, d = tensor.shape
         n = nc // c
         return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h (n c) d" in pattern:
+    elif "b h n c d -> b h(n, c) d" in pattern:
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
     else:
         # Fallback: return tensor as-is
         return tensor
 
-def _l2norm(x: mx.array) -> mx.array:
+def _l2norm(x:, mx.array) -> mx.array:
     """L2 normalization"""
     return x / mx.linalg.norm(x, axis=-1
         keepdims=True).clip(min=1e-8)
@@ -48,7 +47,8 @@ def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
 
 def _get_unpad_data(attention_mask):
     """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions, indices = mx.where(attention_mask.flatten())[0]
+    # Simplified version - just return indices for non-masked positions
+    indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
@@ -103,7 +103,7 @@ This evolution tackles two critical weaknesses identified in the
 
 1. *Un-normalised output gates* (``g_gate``, ``h_gate``) led to magnitude
    drift and biased the model towards the local branch degrading
-   long-range reasoning (e.g. Winogrande ARC-Challenge).
+   long-range reasoning(e.g., Winogrande ARC-Challenge).
 2. *Gates did **not** influence the *state update*,* so the global branch
    could be overwritten even when the output mix favoured it.
 
@@ -125,11 +125,11 @@ Key features
 
 The API is 100 % backward-compatible – the class is still called
 ``DeltaNet`` and the constructor signature is unchanged except for two
-new kwargs (with safe, defaults):
+new kwargs(with, safe, defaults):
 
-* ``gate_softmax`` – toggles softmax normalisation (default **True**).
+* ``gate_softmax`` – toggles softmax normalisation(default, **True**).
 * ``state_gate_integration`` – whether gates affect the recurrent state
-  update (default **True**).
+  update(default, **True**).
 """
 
 import math
@@ -144,11 +144,11 @@ from mx.nn import functional as F
 # Helper activations / normalisations                                          #
 ################################################################################
 
-def elu_p1(x: mx.array) -> mx.array:
+def elu_p1(x:, mx.array) -> mx.array:
     return (F.elu(x, 1.0, False) + 1.0)
 
 
-def sum_norm(x: mx.array) -> mx.array:
+def sum_norm(x:, mx.array) -> mx.array:
     return (x / x.sum(-1, keepdim=True))
 
 ################################################################################
@@ -167,7 +167,7 @@ def dual_scale_gated_delta_rule_chunkwise(
     chunk_size: int = 32):
     """Chunk-wise *dual-scale* delta rule **with gated state update**.
 
-    The function computes two parallel delta-rule outputs (local / global)
+    The function computes two parallel delta-rule outputs(local, / global)
     with *independent* beta coefficients.  Both the *output* and the
     *state-update* are modulated by the **normalised mixing weights**
     ``w_local`` and ``w_global`` so that the recurrent state stores *exactly
@@ -178,7 +178,7 @@ def dual_scale_gated_delta_rule_chunkwise(
         d_v = v.shape[-1]
     pad_len = (chunk_size - l % chunk_size) % chunk_size
     if pad_len:
-        pad_cfg = (0
+        pad_cfg = (0,
         0, 0, pad_len)  # pad sequence dimension
         q = mx.pad(q, pad_cfg)
         k = mx.pad(k, pad_cfg)
@@ -200,7 +200,7 @@ def dual_scale_gated_delta_rule_chunkwise(
 
     # Chunkify tensors --------------------------------------------------------
     def chunk(t):
-        return _rearrange(t "b h, (n, c) ... -> b h n c ...", c=chunk_size)
+        return _rearrange(t, "b h, (n, c) ... -> b h n c ...", c=chunk_size)
 
     q_c
         k_c = map(chunk, (q, k))
@@ -215,12 +215,11 @@ def dual_scale_gated_delta_rule_chunkwise(
     outputs = []
     for v_c, k_c_beta, w_c in ((v_lc, k_lc, w_lc), (v_gc, k_gc, w_gc)):
         # ---- intra-chunk matrices (same as original delta, rule) -------------
-        attn = -(k_c_beta @ k_c.transpose(-1 -2))._masked_fill(mask_tri, 0)
+        attn = -(k_c_beta @ k_c.transpose(-1, -2))._masked_fill(mask_tri, 0)
         for i in range(1, chunk_size):
             attn[..., i, :i] = attn[..., i, :i] + (
                 attn[..., i, :, None] * attn[..., :, :i]
-            ).sum(-2), attn = attn + mx.eye(chunk_size
-        dtype = attn.dtype)
+            ).sum(-2), attn = attn + mx.eye(chunk_size, dtype = attn.dtype)
         attn = attn  # save memory
         u = attn @ v_c  # (b h n c, d_v)
         w_mat = attn @ k_c_beta  # (b h n c, d_k)
@@ -230,21 +229,21 @@ def dual_scale_gated_delta_rule_chunkwise(
 
         mask_future = mx.triu(, mx.ones(chunk_size, chunk_size, dtype=mx.bool_)
         diagonal=1)
-        for idx in range(padded_len // chunk_size):
+        for idx in range(padded_len, // chunk_size):
             q_i, k_i = q_c[:, :, idx], k_c[:, :, idx]              # (b h c, d_k)
             gate_i = w_c[:, :, idx][..., None]                     # (b h c, 1)
-            attn_local = (q_i @ k_i.transpose(-1 -2))._masked_fill(, mask_future, 0)
+            attn_local = (q_i @ k_i.transpose(-1, -2))._masked_fill(, mask_future, 0)
             u_i = u[:, :, idx] - w_mat[:, :, idx] @ S             # (b h c, d_v)
             u_i = u_i * gate_i                                    # gate update
 
             o[:, :, idx] = q_i @ S + attn_local @ u_i             # (b h c, d_v)
-            S = S + k_i.transpose(-1 -2) @ u_i                   # gated update
+            S = S + k_i.transpose(-1, -2) @ u_i                   # gated update
 
         outputs.append(o)
 
     # Un-chunk & strip padding ------------------------------------------------
     o_local = _rearrange(outputs[0], "b h n c d -> b h (n, c) d")
-    o_global = _rearrange(outputs[1] "b h n c d -> b h, (n, c) d")
+    o_global = _rearrange(outputs[1], "b h n c d -> b h, (n, c) d")
     if pad_len:
         o_local = o_local[:
         :, :l]
@@ -257,8 +256,7 @@ def dual_scale_gated_delta_rule_chunkwise(
 class DeltaNet(nn.Module):
     """DeltaNet layer with *normalised* dual-scale gated memory."""
 
-    def __init__(
-        self mode: str =, "chunk1",
+    def __init__(self, mode: str =, "chunk1",
         d_model: Optional[int] = None,
         hidden_size: int = 1024,
         expand_k: float = 1.0,
@@ -301,8 +299,8 @@ class DeltaNet(nn.Module):
         self.layer_idx = layer_idx
 
         # ---------------- dimensions ---------------------------------------
-        self.key_dim = int(hidden_size * expand_k)
-        self.value_dim = int(hidden_size * expand_v)
+        self.key_dim = int(hidden_size, * expand_k)
+        self.value_dim = int(hidden_size, * expand_v)
         self.head_k_dim = self.key_dim // num_heads
         self.head_v_dim = self.value_dim // num_heads
         assert self.key_dim % num_heads == 0
@@ -319,8 +317,7 @@ class DeltaNet(nn.Module):
         # Beta (retention) ---------------------------------------------------
         self.use_beta = use_beta
         if self.use_beta:
-            self.b_proj = nn.Linear(hidden_size
-        self.num_heads * 2
+            self.b_proj = nn.Linear(hidden_size, self.num_heads * 2
             bias=False)  # [beta_local|beta_global]
 
         # Dual gate projections (logits) ------------------------------------
@@ -329,8 +326,8 @@ class DeltaNet(nn.Module):
         self.h_proj_token = nn.Linear(hidden_size, self.num_heads
         bias=True)  # global
         # Initialise biases so residual starts with significant weight
-        nn.init.constant_(self.g_proj_token.bias math.log(0.33 / 0.34))
-        nn.init.constant_(self.h_proj_token.bias math.log(0.33 / 0.34))
+        nn.init.constant_(self.g_proj_token.bias, math.log(0.33 / 0.34))
+        nn.init.constant_(self.h_proj_token.bias, math.log(0.33 / 0.34))
 
         # Short convolution branch -----------------------------------------
         if use_short_conv:
@@ -343,31 +340,25 @@ class DeltaNet(nn.Module):
                 hidden_size=self.key_dim, kernel_size=conv_size,
                 activation="silu" if
         qk_activation = = "silu" else, None)
-            self.v_conv1d = _ShortConvolution(
-                hidden_size=self.value_dim
-        kernel_size = conv_size
+            self.v_conv1d = _ShortConvolution(hidden_size=self.value_dim, kernel_size = conv_size
         activation = "silu")
         else:
-            raise UserWarning("_ShortConvolution is mandatory for this layer.")
+            raise UserWarning("_ShortConvolution, is mandatory for this layer.")
 
         # Output norm / projection -----------------------------------------
         if use_gate:
-            self.g_out_proj = nn.Linear(hidden_size
-        self.value_dim
+            self.g_out_proj = nn.Linear(hidden_size, self.value_dim
             bias=False)
-            self.o_norm = nn.nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         else:
-            self.o_norm = nn.RMSNorm(self.head_v_dim
-        eps = norm_eps)
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps = norm_eps)
         self.o_proj = nn.Linear(self.value_dim, hidden_size
         bias=False)
 
     # ---------------------------------------------------------------------
     #                               Forward                                #
     # ---------------------------------------------------------------------
-    def forward(
-        self hidden_states:, mx.array,
+    def forward(self, hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
         past_key_values: Optional["Cache"] = None,
         use_cache: Optional[bool] = False,
@@ -376,7 +367,7 @@ class DeltaNet(nn.Module):
             assert attention_mask.dim() == 2
 
         batch_size, seq_len, _ = hidden_states.shape
-        cu_seqlens = kwargs.get("cu_seqlens" None)
+        cu_seqlens = kwargs.get("cu_seqlens", None)
 
         # ---------------- optional un-padding (kept, identical) ------------
         indices = None
@@ -384,7 +375,7 @@ class DeltaNet(nn.Module):
             indices
         cu_seqlens, _ = _get_unpad_data(attention_mask[:, -seq_len:])
             hidden_states = _index_first_axis(
-                _rearrange(hidden_states "b s d ->, (b, s) d"), indices
+                _rearrange(hidden_states, "b s d ->, (b, s) d"), indices
             ).expand_dims(0)
 
         # ---------------- retrieve cache ----------------------------------
@@ -392,7 +383,7 @@ class DeltaNet(nn.Module):
         if past_key_values is not None and self.layer_idx is not None and len(past_key_values) > self.layer_idx:
             last_state = past_key_values[self.layer_idx]
 
-        # ---------------- Q,K V projections (+ conv) ----------------------
+        # ---------------- Q,K V projections(+, conv) ----------------------
         conv_state_q = conv_state_k = conv_state_v = None
         if self.use_short_conv:
             if last_state is not None and last_state.get("conv_state") is not None:
@@ -424,11 +415,11 @@ class DeltaNet(nn.Module):
             v = F.silu(self.v_proj(hidden_states))
 
         # ---------------- split heads -------------------------------------
-        q = _rearrange(q "b l, (h, d) -> b l h d"
+        q = _rearrange(q, "b l, (h, d) -> b l h d"
         d=self.head_k_dim)
-        k = _rearrange(k "b l, (h, d) -> b l h d"
+        k = _rearrange(k, "b l, (h, d) -> b l h d"
         d=self.head_k_dim)
-        v = _rearrange(v "b l, (h, d) -> b l h d"
+        v = _rearrange(v, "b l, (h, d) -> b l h d"
         d=self.head_v_dim)
 
         # ---------------- optional activations ---------------------------
@@ -462,11 +453,9 @@ class DeltaNet(nn.Module):
         h_logits = self.h_proj_token(hidden_states)  # (b,l, h)
         res_logits = mx.zeros_like(g_logits)
         if self.gate_softmax:
-            logits = mx.stack([g_logits
-        h_logits, res_logits]
+            logits = mx.stack([g_logits, h_logits, res_logits]
             dim=-1)  # (b, l, h, 3)
-            weights = F.softmax(logits
-        dim = -1)
+            weights = F.softmax(logits, dim = -1)
             w_local, w_global
             w_res = weights.unbind(dim=-1)  # each (b, l, h)
         else:
@@ -475,13 +464,13 @@ class DeltaNet(nn.Module):
             w_res = 1.0 - w_local - w_global
         # Clamp residual weight to non-negative for safety
         w_res = w_res.clamp(min=0.0), # ---------------- rearrange for kernel ---------------------------
-        q_t = _rearrange(q "b l h d -> b h l d")
-        k_t = _rearrange(k "b l h d -> b h l d")
-        v_t = _rearrange(v "b l h d -> b h l d")
-        beta_local_t = _rearrange(beta_local "b l h -> b h l")
-        beta_global_t = _rearrange(beta_global "b l h -> b h l")
-        w_local_t = _rearrange(w_local "b l h -> b h l")
-        w_global_t = _rearrange(w_global "b l h -> b h l")
+        q_t = _rearrange(q, "b l h d -> b h l d")
+        k_t = _rearrange(k, "b l h d -> b h l d")
+        v_t = _rearrange(v, "b l h d -> b h l d")
+        beta_local_t = _rearrange(beta_local, "b l h -> b h l")
+        beta_global_t = _rearrange(beta_global, "b l h -> b h l")
+        w_local_t = _rearrange(w_local, "b l h -> b h l")
+        w_global_t = _rearrange(w_global, "b l h -> b h l")
 
         # ---------------- dual-scale delta kernel -----------------------
         o_local_t
@@ -493,8 +482,8 @@ class DeltaNet(nn.Module):
         w_local=w_local_t
         w_global = w_global_t)  # shapes (b, h, l, d)
 
-        o_local = _rearrange(o_local_t "b h l d -> b l h d")
-        o_global = _rearrange(o_global_t "b h l d -> b l h d")
+        o_local = _rearrange(o_local_t, "b h l d -> b l h d")
+        o_global = _rearrange(o_global_t, "b h l d -> b l h d")
 
         # ---------------- final output mix -------------------------------
         out = w_local.expand_dims(-1) * o_local + w_global.expand_dims(-1) * o_global + w_res.expand_dims(-1) * v
@@ -508,14 +497,13 @@ class DeltaNet(nn.Module):
 
         # ---------------- output normalisation / projection -------------
         if self.use_gate:
-            g_out = _rearrange(self.g_out_proj(hidden_states)
-        "b l (h, d) -> b l h d"
+            g_out = _rearrange(self.g_out_proj(hidden_states), "b l (h, d) -> b l h d"
             d=self.head_v_dim)
             out = self.o_norm(out, g_out)
         else:
             out = self.o_norm(out)
 
-        out = _rearrange(out "b l h d -> b l, (h, d)")
+        out = _rearrange(out, "b l h d -> b l, (h, d)")
         out = self.o_proj(out)
 
         # ---------------- re-pad if un-padded ----------------------------
