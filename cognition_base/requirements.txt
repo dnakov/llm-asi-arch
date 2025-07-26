@@ -1,0 +1,9 @@
+opensearch-py>=2.0.0
+sentence-transformers>=2.2.0,<2.3.0
+torch>=1.13.0
+numpy>=1.21.0
+transformers>=4.21.0,<5.0.0
+huggingface-hub>=0.10.0,<0.17.0
+scikit-learn>=1.1.0
+flask>=2.0.0
+flask-cors>=3.0.0 
