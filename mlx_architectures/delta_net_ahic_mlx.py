@@ -118,39 +118,32 @@ class _DepthwiseFIRConv1d(nn.Module):
         super().__init__()
         self.kernel_size = int(kernel_size)
         # Initialize filters - simple approach without .at[]
-        filt = mx.zeros((num_heads, head_dim, self.kernel_size))
-        # Create initialization array
         init_filt = mx.concatenate([
             mx.zeros((num_heads, head_dim, self.kernel_size - 1)),
             mx.ones((num_heads, head_dim, 1))
         ], axis=-1)
         # Add small noise
-        noise = 0.01 * mx.random.normal(init_filt.shape, dtype=init_filt.dtype)
+        noise = 0.01 * mx.random.normal(init_filt.shape)
         self.filters = init_filt + noise
 
     def __call__(self, x: mx.array) -> mx.array:  # x: (B,L,H,D)
         b, l, h, d = x.shape
-        weight = rearrange(self.filters, "h d k -> (h d) 1 k")
-        x_f = rearrange(x, "b l h d -> b (h d) l")
         
-        # Pad for causal convolution
-        padding = [(0, 0), (0, 0), (self.kernel_size - 1, 0)]
-        x_pad = mx.pad(x_f, padding)
+        # Simpler approach: Apply filter as a simple linear combination along the sequence dim
+        # Pad the sequence dimension for causal convolution
+        x_padded = mx.pad(x, [(0, 0), (self.kernel_size - 1, 0), (0, 0), (0, 0)])
         
-        # Manual grouped convolution since MLX doesn't have direct grouped conv1d
-        output_channels = []
-        for i in range(h * d):
-            # Apply convolution for each channel separately
-            x_channel = x_pad[:, i:i+1, :]  # (B, 1, L+K-1)
-            w_channel = weight[i:i+1, :, :]  # (1, 1, K)
-            # Manual convolution
-            conv_out = mx.zeros((b, 1, l))
-            for j in range(self.kernel_size):
-                conv_out = conv_out + x_channel[:, :, j:j+l] * w_channel[:, :, j:j+1]
-            output_channels.append(conv_out)
+        # Apply convolution manually across the sequence dimension
+        output = mx.zeros_like(x)
+        for i in range(self.kernel_size):
+            # Extract the slice for this filter position
+            x_slice = x_padded[:, i:i+l, :, :]
+            # Apply the filter weight for this position
+            filter_weight = self.filters[:, :, i]  # (H, D)
+            # Broadcast multiply: (B, L, H, D) * (H, D) -> (B, L, H, D)
+            output = output + x_slice * filter_weight[None, None, :, :]
         
-        y = mx.concatenate(output_channels, axis=1)
-        return rearrange(y, "b (h d) l -> b l h d", h=h)
+        return output
 
 # -----------------------------------------------------------------------------
 # Causal chunked Δ-rule (unchanged numerics except dtype fix)
@@ -169,10 +162,9 @@ def _delta_rule_chunkwise(q, k, v, beta, *, chunk_size: int = 32):
     k_norm = mx.maximum(k_norm, 1e-8)
     k = k / k_norm
 
-    # Apply beta scaling - reshape beta to match v dimensions
-    # beta comes in as (b, L, h), need to transpose to (b, h, L)
-    beta_t = beta.transpose(0, 2, 1)  # (b, L, h) -> (b, h, L)
-    beta_expanded = beta_t[..., None]  # (b, h, L, 1)
+    # Apply beta scaling
+    # beta comes in as (b, h, L), need to expand to (b, h, L, 1)
+    beta_expanded = beta[..., None]  # (b, h, L, 1)
     v = v * beta_expanded
     
     # Simplified attention computation - use standard attention mechanism
@@ -364,7 +356,7 @@ class DeltaNet(nn.Module):
         """Apply 1D convolution with causal padding."""
         # MLX Conv1d expects (B, L, D) format
         # Apply causal padding on the length dimension
-        kernel_size = conv_layer.weight.shape[1]  # kernel_size is middle dimension
+        kernel_size = conv_layer.weight.shape[0]  # kernel_size is first dimension in MLX Conv1d
         padding = [(0, 0), (kernel_size - 1, 0), (0, 0)]
         x_padded = mx.pad(x, padding)
         
@@ -379,12 +371,7 @@ class DeltaNet(nn.Module):
     # --------------------------------------------------------------
     # Forward
     # --------------------------------------------------------------
-    def __call__(
-        self,
-        hidden_states: mx.array,
-        attention_mask: Optional[mx.array] = None,
-        **kwargs,
-    ) -> Tuple[mx.array, Optional[mx.array]]:
+    def __call__(self, hidden_states: mx.array, attention_mask: Optional[mx.array] = None, **kwargs) -> mx.array:
         
         B0, L0, _ = hidden_states.shape
 
@@ -398,9 +385,9 @@ class DeltaNet(nn.Module):
         k = self._apply_conv1d(k_lin, self.k_conv1d)
         v = self._apply_conv1d(v_lin, self.v_conv1d)
         
-        q = rearrange(q, "b l (h d) -> b l h d", d=self.head_k_dim)
-        k = rearrange(k, "b l (h d) -> b l h d", d=self.head_k_dim)
-        v = rearrange(v, "b l (h d) -> b l h d", d=self.head_v_dim)
+        q = q.reshape(q.shape[0], q.shape[1], self.num_heads, self.head_k_dim)
+        k = k.reshape(k.shape[0], k.shape[1], self.num_heads, self.head_k_dim)
+        v = v.reshape(v.shape[0], v.shape[1], self.num_heads, self.head_v_dim)
 
         if self.qk_activation != "silu":
             if self.qk_activation == "relu":
@@ -422,9 +409,9 @@ class DeltaNet(nn.Module):
             rearrange(q, "b l h d -> b h l d"),
             rearrange(k, "b l h d -> b h l d"),
             rearrange(v, "b l h d -> b h l d"),
-            rearrange(beta, "b l h -> b h l"),
+            beta.transpose(0, 2, 1),  # (b, l, h) -> (b, h, l)
         )
-        delta_out = rearrange(delta_out, "b h l d -> b l h d")
+        delta_out = delta_out.transpose(0, 2, 1, 3)  # b h l d -> b l h d
         local_short = self.local_fir_short(v)
         local_long = self.local_fir_long(v)
 
@@ -436,11 +423,11 @@ class DeltaNet(nn.Module):
         mean_d, std_d = self._stats_mean_std(delta_out)
         # Stack as feature dim: (B,L,H,6) -> (B,L,H*6)
         stats = mx.stack([mean_s, std_s, mean_l, std_l, mean_d, std_d], axis=-1)
-        stats_flat = rearrange(stats, "b l h f -> b l (h f)")
+        stats_flat = stats.reshape(stats.shape[0], stats.shape[1], -1)
         # Router input
         router_in = mx.concatenate([hidden_states, stats_flat], axis=-1)
         router_logits = self.context_router_mlp(router_in)  # (B,L,H*3)
-        router_logits = rearrange(router_logits, "b l (h c) -> b l h c", h=self.num_heads, c=3)
+        router_logits = router_logits.reshape(router_logits.shape[0], router_logits.shape[1], self.num_heads, 3)
 
         # Temperature scheduling
         tau = self._mix_temperature()  # (H,)
@@ -477,13 +464,13 @@ class DeltaNet(nn.Module):
 
         # Output norm/proj
         if self.use_gate:
-            g_vec = rearrange(self.g_proj(hidden_states), "b l (h d) -> b l h d", d=self.head_v_dim)
+            g_vec = self.g_proj(hidden_states).reshape(hidden_states.shape[0], hidden_states.shape[1], self.num_heads, self.head_v_dim)
             # Simplified gating for MLX
             o = self.o_norm(o) * g_vec
         else:
             o = self.o_norm(o)
-        o = rearrange(o, "b l h d -> b l (h d)")
+        o = o.reshape(o.shape[0], o.shape[1], -1)
         o = self.o_proj(o)
         
         self._step = self._step + 1
-        return o, self.reg_loss
+        return o
