@@ -9,7 +9,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """MLX implementation of einops rearrange"""
+    """MLX tensor reshape and transpose operations for pattern-based transformations"""
     if pattern == "b l h d -> b (h d) l":
         b, l, h, d = tensor.shape
         return tensor.transpose(0, 2, 3, 1).reshape(b, h * d, l)

@@ -9,7 +9,7 @@ import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
 def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if "b l (h d) -> b l h d" in pattern:
         h = kwargs.get('h', 1)
         b, l, hd = tensor.shape

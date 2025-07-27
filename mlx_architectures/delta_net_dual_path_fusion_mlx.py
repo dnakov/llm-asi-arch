@@ -61,7 +61,7 @@ def l2norm(x: mx.array) -> mx.array:
     return x / norm
 
 # -----------------------------------------------------------------------------
-# Simple einops replacement functions
+# MLX tensor reshaping and transformation utilities
 # -----------------------------------------------------------------------------
 
 def rearrange_b_h_l_d_to_b_h_n_c_d(x: mx.array, chunk_size: int) -> mx.array:

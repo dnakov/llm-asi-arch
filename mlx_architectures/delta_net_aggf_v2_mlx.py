@@ -45,9 +45,9 @@ No other behavioural change is introduced.
 
 MLX CONVERSION NOTES
 --------------------
-- Replaced torch.nn with mlx.nn modules
-- Converted torch.Tensor operations to mlx.core.array
-- Removed device-specific operations (.cuda(), .to())
+- Replaced PyTorch modules with mlx.nn equivalents
+- Converted tensor operations to mlx.core.array
+- Removed device-specific operations (Apple Silicon uses unified memory)
 - Updated activation functions to MLX equivalents
 - Maintained mathematical equivalence while optimizing for Apple Silicon
 """

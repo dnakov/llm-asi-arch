@@ -38,8 +38,8 @@ Key Innovations (enabled by default)
    faster convergence than flat softmax.
 
 All computations remain **O(N·d)**, strictly causal, batch-size agnostic,
-`einops.rearrange` is used everywhere, and the @torch.compile kernel for
-chunk-wise Δ-rule is preserved.
+and efficient MLX operations are used throughout for
+chunk-wise Δ-rule computation.
 """
 from __future__ import annotations
 

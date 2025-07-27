@@ -26,7 +26,7 @@ from typing import Optional, Tuple, TYPE_CHECKING, Dict
 import mlx.core as mx
 import mlx.nn as nn
 
-# Replace einops with basic MLX reshape operations
+# Tensor reshape operations using native MLX functionality
 def rearrange(x: mx.array, pattern: str, **dims) -> mx.array:
     """Basic implementation of rearrange patterns used in this code."""
     if pattern == "b l (h d) -> b l h d":

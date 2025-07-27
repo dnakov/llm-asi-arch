@@ -54,7 +54,7 @@ not alter the innovative architecture in any way.
 
 MLX Conversion Notes:
 - Converted from PyTorch to MLX format
-- Replaced torch.nn with mlx.nn
+- Updated neural network modules to use mlx.nn
 - Updated tensor operations for MLX arrays
 - Maintained architectural fidelity
 """

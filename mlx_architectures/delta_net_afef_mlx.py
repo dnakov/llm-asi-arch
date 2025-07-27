@@ -25,9 +25,9 @@ Key innovations (enabled by default)
 
 MLX Implementation Notes:
 - Converted from PyTorch to MLX framework
-- Uses mlx.nn modules instead of torch.nn
+- Uses mlx.nn modules instead of PyTorch nn
 - Simplified some operations for MLX compatibility
-- Removed @torch.compile decorators (MLX handles optimization differently)
+- Removed compilation decorators (MLX handles optimization automatically)
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ import mlx.nn as nn
 # -----------------------------------------------------------------------------
 
 def rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if "b l (h d) -> b l h d" in pattern:
         h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape

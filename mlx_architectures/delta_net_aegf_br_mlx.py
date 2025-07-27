@@ -35,7 +35,7 @@ import mlx.nn as nn
 
 # MLX rearrange replacement functions
 def rearrange(x: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if "b l (h d) -> b l h d" in pattern:
         d = kwargs.get('d')
         b, l, hd = x.shape

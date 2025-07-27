@@ -25,7 +25,7 @@ Major Innovations:
    - Additional (optional) mid-scale kernel support (disabled by default, but infrastructure for easy addition).
 
 5. **Robust Implementation:**
-   - Universal use of einops.rearrange, batch-size agnostic, chunked computation, strictly causal and sub-quadratic.
+   - Native MLX tensor operations with custom reshape functions, batch-size agnostic, chunked computation, strictly causal and sub-quadratic.
    - Preserves all initialization, interface, and cache protocols.
 
 Fix Log (2024-06-15):
@@ -51,7 +51,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import mlx.core as mx
 import mlx.nn as nn
-# Using native MLX operations instead of einops for compatibility
+# Using native MLX operations for optimal Apple Silicon performance
 
 def rearrange_for_mlx(x, pattern_from, pattern_to=None, **kwargs):
     """Simple rearrange replacement for common patterns."""

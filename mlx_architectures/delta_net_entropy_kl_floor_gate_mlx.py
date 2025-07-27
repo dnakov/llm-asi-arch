@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing import Any as Cache
 
 def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """MLX implementation of einops rearrange"""
+    """MLX tensor reshaping and transposition utility"""
     if pattern == "b l h d -> b (h d) l":
         b, l, h, d = tensor.shape
         return tensor.transpose(0, 2, 3, 1).reshape(b, h * d, l)

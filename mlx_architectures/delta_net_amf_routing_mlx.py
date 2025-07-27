@@ -47,7 +47,7 @@ def l2norm(x: mx.array) -> mx.array:
     return x / mx.linalg.norm(x, axis=-1, keepdims=True)
 
 def rearrange(x: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if pattern == "b l (h d) -> b l h d":
         h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = x.shape

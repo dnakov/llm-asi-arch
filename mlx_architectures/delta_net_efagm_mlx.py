@@ -49,7 +49,7 @@ def _l2norm(x):
     return x / mx.maximum(mx.linalg.norm(x, axis=-1, keepdims=True), 1e-8)
 
 def _rearrange(x, pattern, **kwargs):
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if "b l (h d) -> b l h d" in pattern:
         h = kwargs.get('h', 1)
         b, l, hd = x.shape

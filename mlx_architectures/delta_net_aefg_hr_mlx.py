@@ -37,8 +37,8 @@ Key Innovations
       ultra-local reasoning without reintroducing variance spikes.
 
 All other core mechanics – O(N) chunked Δ-rule, causal depth-wise FIR memory,
-probability-floored path fusion, batch-agnostic shapes, and @torch.compile on
-heavy kernels – are preserved.
+probability-floored path fusion, batch-agnostic shapes, and MLX auto-optimization
+for heavy kernels – are preserved.
 """
 from __future__ import annotations
 

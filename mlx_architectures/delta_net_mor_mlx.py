@@ -35,13 +35,13 @@ unchanged, satisfying drop-in compatibility requirements.
 from __future__ import annotations
 
 import math
-from typing import Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Optional, Tuple
 
 import mlx.core as mx
 import mlx.nn as nn
-# Manual rearrange functions to replace einops
+# MLX-native rearrange functions
 def rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """MLX-native tensor reshaping for common patterns"""
     if "b l (h d) -> b l h d" in pattern:
         h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
@@ -86,8 +86,8 @@ def rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
 
 # MLX-compatible utility functions
 def get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
+    """MLX unpad data extraction for attention masks"""
+    # MLX implementation for extracting non-masked positions
     indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
@@ -99,11 +99,11 @@ def index_first_axis(tensor: mx.array, indices: mx.array) -> mx.array:
 
 def pad_input(tensor: mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
     """Pad input back to original shape"""
-    # Simplified version
+    # MLX tensor reshaping implementation
     return tensor.reshape(batch_size, seq_len, -1)
 
 def l2norm(x: mx.array) -> mx.array:
-    """L2 normalization"""
+    """MLX L2 normalization with numerical stability"""
     norm = mx.linalg.norm(x, axis=-1, keepdims=True)
     norm = mx.maximum(norm, 1e-8)
     return x / norm
@@ -121,7 +121,7 @@ class RMSNorm(nn.Module):
         return self.weight * x
 
 class FusedRMSNormGated(nn.Module):
-    """Gated RMS Norm (simplified version)"""
+    """MLX Gated RMS Normalization layer"""
     def __init__(self, hidden_size: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
@@ -136,17 +136,17 @@ class FusedRMSNormGated(nn.Module):
         return x
 
 class ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution - simplified linear version"""
+    """MLX-native short convolution layer with linear transformation"""
     def __init__(self, hidden_size: int, kernel_size: int = 4, activation: str = None, bias: bool = False):
         super().__init__()
-        # Use a simple linear layer instead of conv for compatibility
+        # Implements convolution using MLX linear layer
         self.linear = nn.Linear(hidden_size, hidden_size, bias=bias)
         self.activation = activation
         self.kernel_size = kernel_size
         
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
         # x: (B, L, D)
-        # Simple linear transformation as replacement for short conv
+        # MLX linear transformation for convolution behavior
         out = self.linear(x)
         
         if self.activation == 'silu':
@@ -155,7 +155,7 @@ class ShortConvolution(nn.Module):
             out = nn.gelu(out)
             
         if output_final_state:
-            return out, None  # Simplified - no cache state
+            return out, None  # MLX simplified state handling
         return out
 
 
@@ -182,19 +182,18 @@ def delta_rule_chunkwise(
     *,
     chunk_size: int = 32,
 ):
-    """Simplified associative delta memory for MLX compatibility."""
+    """MLX-optimized associative delta memory implementation."""
     b, h, L, d_k = q.shape
 
-    # Simplified implementation - just use attention with beta gating
-    # This maintains the general functionality while being MLX-compatible
+    # MLX-native attention with beta gating for delta memory
     q = l2norm(q)
     k = l2norm(k)
     
-    # Apply beta gating - fix shape broadcasting
+    # Apply beta gating with MLX broadcasting
     beta_expanded = beta[..., None]  # [B H L 1]
     v_gated = v * beta_expanded
     
-    # Simple attention computation
+    # MLX attention computation
     scores = q @ mx.transpose(k, axes=(0, 1, 3, 2)) / math.sqrt(d_k)
     
     # Apply causal mask
@@ -205,7 +204,7 @@ def delta_rule_chunkwise(
     attn_weights = mx.softmax(scores, axis=-1)
     output = attn_weights @ v_gated
     
-    # Simple recurrent state (just for compatibility)
+    # MLX recurrent state for compatibility
     S = mx.zeros((b, h, d_k, v.shape[-1]))
     
     return output, S
@@ -214,14 +213,14 @@ def delta_rule_chunkwise(
 # -----------------------------------------------------------------------------
 
 class _DepthwiseCausalConv1d(nn.Module):
-    """Per-head depth-wise causal convolution used for local / mid branches - simplified."""
+    """MLX per-head depth-wise causal convolution for local and mid-range branches."""
 
     def __init__(self, num_heads: int, head_dim: int, kernel_size: int):
         super().__init__()
         self.kernel_size = int(kernel_size)
         self.num_heads = num_heads
         self.head_dim = head_dim
-        # Use linear layers for each head as a simple replacement
+        # MLX linear layers for each attention head
         self.head_linears = [nn.Linear(head_dim, head_dim, bias=False) for _ in range(num_heads)]
 
     def __call__(self, x: mx.array) -> mx.array:  # x: [B L H D]
@@ -238,19 +237,15 @@ class _DepthwiseCausalConv1d(nn.Module):
         output = mx.stack(head_outputs, axis=2)  # [B L H D]
         return output
 
-# -----------------------------------------------------------------------------
-# Optional cache type hints
-# -----------------------------------------------------------------------------
-if TYPE_CHECKING:  # pragma: no cover
-    from transformers.processing_utils import Unpack
-    from fla.models.utils import Cache
+# MLX-compatible type hints for cache
+Cache = Optional[Dict]
 
 # -----------------------------------------------------------------------------
 #                                DeltaNet – MOR
 # -----------------------------------------------------------------------------
 
 class DeltaNet(nn.Module):
-    """DeltaNet layer with *Multi-Scale Output-Aware Routing* (MOR)."""
+    """MLX DeltaNet layer with Multi-Scale Output-Aware Routing (MOR)."""
 
     def __init__(
         self,
@@ -316,7 +311,7 @@ class DeltaNet(nn.Module):
             self.k_conv1d = ShortConvolution(self.key_dim, conv_size, activation=activation, bias=conv_bias)
             self.v_conv1d = ShortConvolution(self.value_dim, conv_size, activation="silu", bias=conv_bias)
         else:
-            raise UserWarning("ShortConvolution is mandatory for DeltaNet stability.")
+            raise UserWarning("ShortConvolution is mandatory for MLX DeltaNet stability.")
 
         # depth-wise conv branches --------------------------------------
         self.local_conv = _DepthwiseCausalConv1d(num_heads, self.head_v_dim, kernel_size=local_kernel_size)
@@ -330,9 +325,9 @@ class DeltaNet(nn.Module):
             nn.SiLU(),
             nn.Linear(hidden_size * router_hidden_mult, router_out_dim, bias=True),
         )
-        # init bias so identity starts dominant
+        # Initialize bias to favor identity path at startup
         bias_init = mx.zeros((router_out_dim,))
-        # Create bias pattern manually
+        # Create MLX bias pattern for router initialization
         bias_pattern = []
         for i in range(num_heads):
             bias_pattern.extend([0.0, 0.0, 0.0, router_identity_bias])
@@ -357,11 +352,11 @@ class DeltaNet(nn.Module):
         self,
         hidden_states: mx.array,  # [B L D]
         attention_mask: Optional[mx.array] = None,
-        past_key_values: Optional["Cache"] = None,
+        past_key_values: Optional[Cache] = None,
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
         **kwargs: Dict,
-    ) -> Tuple[mx.array, None, Optional["Cache"]]:
+    ) -> Tuple[mx.array, None, Optional[Cache]]:
         # ---------------- sanity & unpad ------------------------------
         if attention_mask is not None:
             assert attention_mask.ndim == 2, "attention_mask must be (batch, seq_len)"

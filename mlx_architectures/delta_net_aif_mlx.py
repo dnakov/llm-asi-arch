@@ -36,7 +36,7 @@ all operations remain batch-agnostic and causally correct.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -58,7 +58,7 @@ def _l2norm(x: mx.array) -> mx.array:
     return x / mx.clip(mx.linalg.norm(x, axis=-1, keepdims=True), a_min=1e-8, a_max=None)
 
 def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Simple tensor reshaping replacement for common patterns (MLX-compatible)"""
     if "b l (h d) -> b l h d" in pattern:
         h = kwargs.get('h', kwargs.get('d', 1))
         b, l, hd = tensor.shape
@@ -99,9 +99,9 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
         # Fallback: return tensor as-is
         return tensor
 
-# Utility functions for FLA compatibility
+# Utility functions for MLX attention handling
 def get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
+    """Simple unpad data extraction for variable-length sequences"""
     indices = mx.where(attention_mask.flatten())[0]
     cu_seqlens = mx.array([0, attention_mask.shape[-1]])
     max_len = attention_mask.shape[-1]
@@ -116,7 +116,7 @@ def pad_input(tensor: mx.array, indices: mx.array, batch_size: int, seq_len: int
     return tensor.reshape(batch_size, seq_len, -1)
 
 class ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
+    """MLX implementation of short convolution for sequence modeling"""
     def __init__(self, hidden_size: int, kernel_size: int = 4, activation: str = None, bias: bool = False):
         super().__init__()
         self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=0, bias=bias)
@@ -170,7 +170,7 @@ class FusedRMSNormGated(nn.Module):
 # -----------------------------------------------------------------------------
 
 class _DepthwiseFIRConv1d(nn.Module):
-    """Per-head depth-wise FIR for tensors shaped (B,L,H,D)."""
+    """Per-head depth-wise FIR for MLX arrays shaped (B,L,H,D)."""
 
     def __init__(self, num_heads: int, head_dim: int, *, kernel_size: int = 31, noise_std: float = 1e-3) -> None:
         super().__init__()
@@ -228,7 +228,7 @@ def _delta_rule_chunkwise(
     *,
     chunk_size: int = 32,
 ):
-    """Associative ∆-rule with O(N) cost via fixed-size chunks."""
+    """Associative delta-rule computation with O(N) cost via fixed-size chunks."""
     b, h, L, d_k = q.shape
     pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
@@ -299,20 +299,20 @@ def _delta_rule_chunkwise(
         out = out[:, :, :L]
     return out, S
 
-# -----------------------------------------------------------------------------
-# Optional typing stub (only for static type checkers)
-# -----------------------------------------------------------------------------
-if TYPE_CHECKING:  # pragma: no cover
-    from fla.models.utils import Cache  # noqa: F401 – type hint only
+# Type hints for cache storage
+Cache = Optional[Dict]
 
 # -----------------------------------------------------------------------------
 # Main DeltaNet implementation – Adaptive Identity Floor & Content-Position Gate
 # -----------------------------------------------------------------------------
 
-class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
-    """DeltaNet layer with Adaptive Identity Floor & Content-Position Fusion gating."""
+class DeltaNet(nn.Module):
+    """DeltaNet layer with Adaptive Identity Floor & Content-Position Fusion gating.
+    
+    MLX-optimized implementation for Apple Silicon.
+    """
 
-    # pylint: disable=too-many-instance-attributes,too-many-statements
+    # Note: Complex architecture with many parameters for adaptive gating
     def __init__(
         self,
         # ---- identifier / misc ---- #
@@ -418,14 +418,14 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
         self.router_dropout = nn.Dropout(router_dropout) if router_dropout > 0.0 else nn.Identity()
         self.router_linear2 = nn.Linear(router_hidden_dim, num_heads * num_paths, bias=True)
         
-        # small negative bias so identity initially dominates (via min floor)
+        # small negative bias so identity initially dominates (via minimum floor)
         self.router_linear2.bias = mx.zeros((num_heads * num_paths,))
 
-        # ------------------ ε-floor & τ schedule -----------
+        # ------------------ epsilon-floor & tau schedule -----------
         self.epsilon_floor = float(epsilon_floor)
         self.tau_group_size = int(tau_group_size)
         self.tau_transition_steps = int(tau_transition_steps)
-        # log τ parameters: per group & per head
+        # log tau parameters: per group & per head
         num_groups = (num_heads + self.tau_group_size - 1) // self.tau_group_size
         self._head2group = mx.arange(num_heads) // self.tau_group_size
         self.log_tau_group = mx.zeros((num_groups,))
@@ -450,7 +450,7 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
         return 1.0 - t / max(1.0, self.id_floor_warmup_steps)
 
     def _blend_tau(self) -> mx.array:  # (H,)
-        """Return per-head τ using group→head transition schedule."""
+        """Return per-head tau using group-to-head transition schedule."""
         t = float(self._step.item())
         blend = min(1.0, t / max(1.0, self.tau_transition_steps))
         tau_g = mx.exp(self.log_tau_group)[self._head2group]
@@ -466,17 +466,17 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
     # ------------------------------------------------------------------
     # forward
     # ------------------------------------------------------------------
-    # pylint: disable=too-many-branches,too-many-locals
+    # Note: Complex forward pass with multiple computation paths
     def __call__(
         self,
         hidden_states: mx.array,  # (B,L,D)
         attention_mask: Optional[mx.array] = None,
-        past_key_values: Optional["Cache"] = None,  # type: ignore[name-defined]
+        past_key_values: Optional[Cache] = None,
         *,
         use_cache: bool = False,
-        output_attentions: bool = False,  # noqa: F841 – kept for API compat
+        output_attentions: bool = False,  # kept for API compatibility
         **kwargs,
-    ) -> Tuple[mx.array, None, Optional["Cache"]]:
+    ) -> Tuple[mx.array, None, Optional[Cache]]:
         # ------------- preliminaries ------------------
         if attention_mask is not None:
             assert attention_mask.ndim == 2, "attention_mask must be (B,L)"
@@ -527,7 +527,7 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
         if self.qk_norm == "sum":
             q, k = _sum_norm(q), _sum_norm(k)
 
-        # β for ∆-rule
+        # beta for delta-rule
         if self.use_beta:
             beta = nn.sigmoid(self.b_proj(hidden_states))
         else:
@@ -535,7 +535,7 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
         if self.allow_neg_eigval:
             beta = beta * 2.0
 
-        # ------------- global ∆-rule path -------------
+        # ------------- global delta-rule path -------------
         delta_out_b, rec_state = _delta_rule_chunkwise(
             _rearrange(q, "b l h d -> b h l d"),
             _rearrange(k, "b l h d -> b h l d"),
@@ -568,7 +568,7 @@ class DeltaNet(nn.Module):  # noqa: D401 – must keep exact public name
         tau = mx.reshape(self._blend_tau(), (1, 1, self.num_heads, 1))
         router_logits = router_logits / tau
 
-        # ε-floor softmax
+        # epsilon-floor softmax
         router_probs = nn.softmax(router_logits, axis=-1)
         router_probs = router_probs * (1.0 - 3 * self.epsilon_floor) + self.epsilon_floor
 

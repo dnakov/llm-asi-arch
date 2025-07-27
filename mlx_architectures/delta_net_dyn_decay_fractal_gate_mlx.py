@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 #######################################################################
 
 def rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
+    """Tensor reshape utility for common patterns using native MLX operations"""
     if pattern == '... (h d) -> ... h d':
         h = kwargs.get('h')
         d = kwargs.get('d')

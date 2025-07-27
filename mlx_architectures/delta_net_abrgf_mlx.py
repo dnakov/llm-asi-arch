@@ -556,7 +556,7 @@ class DeltaNet(nn.Module):
 
         # optional dropout on logits for regularisation
         if self.training and self.fusion_logit_dropout > 0.0:
-            # MLX doesn't have F.dropout, implement basic dropout
+            # MLX dropout implementation using Bernoulli sampling
             if self.training:
                 keep_prob = 1.0 - self.fusion_logit_dropout
                 mask = mx.random.bernoulli(keep_prob, logits.shape)
