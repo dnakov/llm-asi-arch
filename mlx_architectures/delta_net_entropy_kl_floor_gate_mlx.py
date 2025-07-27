@@ -124,7 +124,7 @@ class _ShortConvolution(nn.Module):
             out = nn.gelu(out)
             
         if output_final_state:
-            return out, None  # Simplified - no cache state
+            return out
         return out
 
 
@@ -147,11 +147,11 @@ class _RMSNorm(nn.Module):
 # ---------------------------------------------------------------------------
 
 def _elu_plus_one(x: mx.array) -> mx.array:
-    return nn.elu(x, 1.0) + 1.0
+    return nn.elu(x
 
 
 def _sum_norm(x: mx.array) -> mx.array:
-    return x / x.sum(axis=-1, keepdims=True)
+    return x / x.sum(axis=-1
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ def _delta_chunk_monotonic(q, k, v, beta, lam, chunk_size: int = 32):
     o = _rearrange(o, "b h n c d -> b h (n c) d")
     if pad_len:
         o = o[:, :, :L]
-    return o, S
+    return o
 
 
 # ---------------------------------------------------------------------------
@@ -289,10 +289,17 @@ class _EntropyKLFusionGate(nn.Module):
             nn.Linear(hidden_size * fusion_hidden_mult, num_heads * self.n_paths, bias=True),
         )
         
-        # Initialize bias to favor value path
+        # Initialize bias to favor value path (simplified for MLX)
         bias_init = mx.zeros((num_heads * self.n_paths,))
-        bias_init = bias_init.at[num_heads * 3::self.n_paths].set(2.0)
-        self.mlp.layers[-1].bias = bias_init
+        # Manually set bias values to favor value path
+        bias_values = []
+        for h in range(num_heads):
+            for p in range(self.n_paths):
+                if p == 3:  # value path
+                    bias_values.append(2.0)
+                else:
+                    bias_values.append(0.0)
+        self.mlp.layers[-1].bias = mx.array(bias_values)
         
         self.last_entropy = None
         self.last_kl = None

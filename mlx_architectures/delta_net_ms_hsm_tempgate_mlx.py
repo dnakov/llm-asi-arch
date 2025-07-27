@@ -10,7 +10,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from typing import Tuple, Optional, List, Dict
 
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
+def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     """Simple einops rearrange replacement for common patterns"""
     if "b l(h, d) -> b l h d" in pattern:
         h = kwargs.get('h', kwargs.get('d', 1))
@@ -36,12 +36,12 @@ def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
         # Fallback: return tensor as-is
         return tensor
 
-def _l2norm(x:, mx.array) -> mx.array:
+def _l2norm(x: mx.array) -> mx.array:
     """L2 normalization"""
     return x / mx.linalg.norm(x, axis=-1,
         keepdims=True).clip(min=1e-8)
 
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
+def _masked_fill(tensor: mx.array, mask: mx.array, value: float) -> mx.array:
     """Masked fill operation"""
     return mx.where(mask, value, tensor)
 
@@ -53,11 +53,11 @@ def _get_unpad_data(attention_mask):
     max_len = attention_mask.shape[-1]
     return indices, cu_seqlens, max_len
 
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
+def _index_first_axis(tensor: mx.array, indices: mx.array) -> mx.array:
     """Index first axis"""
     return tensor[indices]
 
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
+def _pad_input(tensor: mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
     """Pad input back to original shape"""
     # Simplified version
     return tensor.reshape(batch_size, seq_len, -1)
@@ -137,12 +137,12 @@ import mlx.nn as F
 # Helper functions
 # -----------------------------------------------------------------------------
 
-def elu_p1(x:, mx.array) -> mx.array:
+def elu_p1(x: mx.array) -> mx.array:
     """Shifted ELU (+1) used as positive kernel feature map."""
     return (F.elu(x, 1.0, False) + 1.0)
 
 
-def sum_norm(x:, mx.array) -> mx.array:
+def sum_norm(x: mx.array) -> mx.array:
     """Normalise so that values along the last dim sum to 1."""
     return(x, / x.sum(dim=-1
         keepdim=True))
@@ -517,7 +517,7 @@ class DeltaNet(nn.Module):
         hsm_out = _rearrange(hsm_out, "b h l d -> b l h d")
 
         # ---------------- compute branch norms -----------------------
-        def _norm(x:, mx.array) -> mx.array:
+        def _norm(x: mx.array) -> mx.array:
             return x.abs().mean(dim=-1), # (B,L, H)
 
         feat = mx.cat([, hidden_states _rearrange(_norm(local_out), "b l h -> b l (h)"),
