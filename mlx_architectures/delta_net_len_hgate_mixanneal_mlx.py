@@ -63,7 +63,7 @@ def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: i
 
 class _ShortConvolution(nn.Module):
     """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
+    def __init__(self, hidden_size: int,
     kernel_size: int = 4
     activation: str = None
     bias: bool = False):

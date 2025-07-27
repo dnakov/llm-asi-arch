@@ -1,103 +1,8 @@
-from __future__ import annotations
-
-"""
-MLX-converted architecture: delta_net_erfg
-Auto-converted from PyTorch to MLX format
-"""
-
-# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
-import mlx.core as mx
-import mlx.nn as nn
-from typing import Tuple, Optional, List, Dict
-
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
-    if "b l(h, d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
-        b, l, hd = tensor.shape
-        d = hd // h
-        return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l(h, d)" in pattern:
-        b, l, h, d = tensor.shape
-        return tensor.reshape(b, l, h * d)
-    elif "b l h d -> b h l d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h l d -> b l h d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h(n, c) d -> b h n c d" in pattern:
-        c = kwargs.get('c', 1)
-        b, h, nc, d = tensor.shape
-        n = nc // c
-        return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h(n, c) d" in pattern:
-        b, h, n, c, d = tensor.shape
-        return tensor.reshape(b, h, n * c, d)
-    else:
-        # Fallback: return tensor as-is
-        return tensor
-
-def _l2norm(x:, mx.array) -> mx.array:
-    """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
-        keepdims=True).clip(min=1e-8)
-
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
-    """Masked fill operation"""
-    return mx.where(mask, value, tensor)
-
-def _get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
-    cu_seqlens = mx.array([0, attention_mask.shape[-1]])
-    max_len = attention_mask.shape[-1]
-    return indices, cu_seqlens, max_len
-
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
-    """Index first axis"""
-    return tensor[indices]
-
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
-    """Pad input back to original shape"""
-    # Simplified version
-    return tensor.reshape(batch_size, seq_len, -1)
-
-class _ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
-        super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
-        self.activation = activation
-        
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
-        # x: (B, L, D)
-        x_conv = x.transpose(0, 2, 1)  # (B, D, L)
-        out = self.conv(x_conv)
-        out = out[:, :, :x.shape[1]]  # Causal truncation
-        out = out.transpose(0, 2, 1)  # (B, L, D)
-        
-        if self.activation == 'silu':
-            out = nn.silu(out)
-        elif self.activation == 'gelu':
-            out = nn.gelu(out)
-            
-        if output_final_state:
-            return out
-        None  # Simplified - no cache state
-        return out
-
-
 # -*- coding: utf-8 -*-
 """
-DeltaNet – Entropy-Regularised Floor-Gated Multi-Scale Memory (ERFG)
-Identifier: delta_net_erfg
+DeltaNet – Entropy-Regularised Floor-Gated Multi-Scale Memory (ERFG) - MLX Version
+==================================================================================
+Identifier: delta_net_erfg_mlx
 
 This evolution unifies the strongest empirical elements of prior DeltaNet
 variants while *directly fixing* the two key residual bottlenecks that were
@@ -108,28 +13,33 @@ identified across experiments:
       entropy + KL penalty to the per-token / per-head routing probabilities.
       The penalty is returned as the `reg_loss` from `forward()` so the
       training loop can incorporate it seamlessly.
-   •  A learnable probability floor(as, in `adaptive_floor_gate`) remains
+   •  A learnable probability floor (as in `adaptive_floor_gate`) remains
       but is now *trainable* through a bounded parameter – the entropy term
       prevents the floor from decaying to zero and collapsing unused paths.
 
-2. **Premature Memory Truncation via unconstrained λ (forget, gate)**
+2. **Premature Memory Truncation via unconstrained λ (forget gate)**
    •  The per-head forget parameter λ is now *scheduled* by a simple
-      monotonic function that starts at 1 (no, forgetting) and only decays
-      toward the learnable target value after `warmup_steps` (default = 30, k)
+      monotonic function that starts at 1 (no forgetting) and only decays
+      toward the learnable target value after `warmup_steps` (default = 30 k)
       – eliminating early long-context degradation while retaining
       adaptability later in training.  The schedule is implemented on-the-fly
       inside `forward()` using the `step` kwarg (optionally supplied by the
-      training, loop).
+      training loop).
 
 All other strengths – dual FIR branches, chunked Δ-rule kernel, adaptive
-probability floor per-head temperature – are preserved.  Complexity remains
+probability floor, per-head temperature – are preserved.  Complexity remains
 O(N) and the public interface is unchanged.
+
+Converted to MLX framework for Apple Silicon optimization.
 """
+from __future__ import annotations
 
 import math
+from typing import Dict, Optional, Tuple, TYPE_CHECKING
+
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.nn as F
+from einops import rearrange
 
 
 
@@ -137,12 +47,35 @@ import mlx.nn as F
 # Helper activations & norms
 # ---------------------------------------------------------------------------
 
-def _elu_plus_one(x:, mx.array) -> mx.array:
-    return (F.elu(x, 1.0, False) + 1.0)
+def _elu_plus_one(x: mx.array) -> mx.array:
+    return mx.maximum(0.0, x) + mx.minimum(0.0, mx.exp(x) - 1.0) + 1.0
 
+def _sum_norm(x: mx.array) -> mx.array:
+    return x / mx.sum(x, axis=-1, keepdims=True)
 
-def _sum_norm(x:, mx.array) -> mx.array:
-    return (x / x.sum(-1, keepdim=True))
+def _silu(x: mx.array) -> mx.array:
+    return x * mx.sigmoid(x)
+
+def _gelu(x: mx.array) -> mx.array:
+    return 0.5 * x * (1.0 + mx.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * x * x * x)))
+
+def _relu(x: mx.array) -> mx.array:
+    return mx.maximum(0.0, x)
+
+def _sigmoid(x: mx.array) -> mx.array:
+    return mx.sigmoid(x)
+
+def _softmax(x: mx.array, axis: int = -1) -> mx.array:
+    return mx.softmax(x, axis=axis)
+
+# ---------------------------------------------------------------------------
+# L2 normalization function
+# ---------------------------------------------------------------------------
+
+def l2norm(x: mx.array, axis: int = -1, eps: float = 1e-8) -> mx.array:
+    """L2 normalize along specified axis."""
+    norm = mx.sqrt(mx.sum(x * x, axis=axis, keepdims=True) + eps)
+    return x / norm
 
 # ---------------------------------------------------------------------------
 # Depth-wise FIR conv (Dirac + orthogonal, noise)

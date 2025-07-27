@@ -38,7 +38,7 @@ def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
 
 def _l2norm(x:, mx.array) -> mx.array:
     """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
+    return x / mx.linalg.norm(x, axis=-1,
         keepdims=True).clip(min=1e-8)
 
 def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
@@ -64,7 +64,7 @@ def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: i
 
 class _ShortConvolution(nn.Module):
     """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
+    def __init__(self, hidden_size: int,
     kernel_size: int = 4
     activation: str = None
     bias: bool = False):
@@ -235,7 +235,7 @@ def _delta_rule_chunkwise_gamma(
 class _DepthwiseFIRConv1d(nn.Module):
     """Per-head depth-wise causal FIR with identity initialisation."""
 
-    def __init__(self, num_heads: int, head_dim: int
+    def __init__(self, num_heads: int, head_dim: int,
     kernel_size: int = 31
     init_eps: float = 0.02):
         super().__init__()

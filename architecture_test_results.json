@@ -1,18 +1,20 @@
 {
   "summary": {
     "total": 106,
-    "syntax_ok": 0,
-    "syntax_failed": 106,
-    "import_ok": 0,
+    "syntax_ok": 1,
+    "syntax_failed": 105,
+    "import_ok": 1,
     "import_failed": 0,
-    "class_found": 0,
+    "class_found": 1,
     "class_not_found": 0,
-    "syntax_rate": 0.0,
-    "import_rate": 0.0,
-    "class_rate": 0.0
+    "syntax_rate": 0.9433962264150944,
+    "import_rate": 0.9433962264150944,
+    "class_rate": 0.9433962264150944
   },
   "details": {
-    "syntax_ok": [],
+    "syntax_ok": [
+      "delta_net_aeoc"
+    ],
     "syntax_failed": [
       {
         "arch": "delta_net_abrgf",
@@ -20,23 +22,23 @@
       },
       {
         "arch": "delta_net_acfg",
-        "error": "Syntax Error line 376: unterminated string literal (detected at line 376)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_acmg",
-        "error": "Syntax Error line 386: unterminated string literal (detected at line 386)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_adaptive_hier_gate",
-        "error": "Syntax Error line 409: unterminated string literal (detected at line 409)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_adaptive_mix_gate",
-        "error": "Syntax Error line 450: unmatched ')'"
+        "error": "Syntax Error line 438: unmatched ')'"
       },
       {
         "arch": "delta_net_adgr",
-        "error": "Syntax Error line 13: invalid syntax"
+        "error": "Syntax Error line 3: unterminated string literal (detected at line 3)"
       },
       {
         "arch": "delta_net_aefg_hr",
@@ -44,51 +46,47 @@
       },
       {
         "arch": "delta_net_aegf_br",
-        "error": "Syntax Error line 274: unmatched ')'"
-      },
-      {
-        "arch": "delta_net_aeoc",
-        "error": "Syntax Error line 160: unmatched ')'"
+        "error": "Syntax Error line 271: unmatched ')'"
       },
       {
         "arch": "delta_net_afbt",
-        "error": "Syntax Error line 170: unmatched ')'"
+        "error": "Syntax Error line 169: unmatched ')'"
       },
       {
         "arch": "delta_net_afef",
-        "error": "Syntax Error line 497: unterminated string literal (detected at line 497)"
+        "error": "Syntax Error line 270: unmatched ')'"
       },
       {
         "arch": "delta_net_afp",
-        "error": "Syntax Error line 515: closing parenthesis ')' does not match opening parenthesis '['"
+        "error": "Syntax Error line 497: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_afrc",
-        "error": "Syntax Error line 388: unterminated string literal (detected at line 388)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_aft",
-        "error": "Syntax Error line 187: unmatched ')'"
+        "error": "Syntax Error line 186: unmatched ')'"
       },
       {
         "arch": "delta_net_aft_dsi",
-        "error": "Syntax Error line 160: unmatched ')'"
+        "error": "Syntax Error line 159: unmatched ')'"
       },
       {
         "arch": "delta_net_aggf_v2",
-        "error": "Syntax Error line 175: unmatched ')'"
+        "error": "Syntax Error line 174: unmatched ')'"
       },
       {
         "arch": "delta_net_ahic",
-        "error": "Syntax Error line 340: unmatched ')'"
+        "error": "Syntax Error line 337: unmatched ')'"
       },
       {
         "arch": "delta_net_ahm_gate",
-        "error": "Syntax Error line 179: unmatched ')'"
+        "error": "Syntax Error line 178: unmatched ')'"
       },
       {
         "arch": "delta_net_aif",
-        "error": "Syntax Error line 307: unmatched ')'"
+        "error": "Syntax Error line 303: unmatched ')'"
       },
       {
         "arch": "delta_net_amf_routing",
@@ -96,11 +94,11 @@
       },
       {
         "arch": "delta_net_annealed_eklf",
-        "error": "Syntax Error line 164: unmatched ')'"
+        "error": "Syntax Error line 193: unmatched ')'"
       },
       {
         "arch": "delta_net_bias_init_mix_gate",
-        "error": "Syntax Error line 171: unmatched ')'"
+        "error": "Syntax Error line 428: unmatched ']'"
       },
       {
         "arch": "delta_net_bscgf",
@@ -108,7 +106,7 @@
       },
       {
         "arch": "delta_net_cagf",
-        "error": "Syntax Error line 389: unterminated string literal (detected at line 389)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_cagf_br",
@@ -124,23 +122,23 @@
       },
       {
         "arch": "delta_net_cagf_rc_pf",
-        "error": "Syntax Error line 500: unmatched ')'"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_cagf_rc_pf_hybrid",
-        "error": "Syntax Error line 395: unterminated string literal (detected at line 395)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_cpaghr",
-        "error": "Syntax Error line 181: unmatched ')'"
+        "error": "Syntax Error line 180: unmatched ')'"
       },
       {
         "arch": "delta_net_crdg",
-        "error": "Syntax Error line 387: unterminated string literal (detected at line 387)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_csm",
-        "error": "Syntax Error line 515: unmatched ']'"
+        "error": "Syntax Error line 508: unmatched ']'"
       },
       {
         "arch": "delta_net_ddfsanr",
@@ -148,31 +146,31 @@
       },
       {
         "arch": "delta_net_dfpcr",
-        "error": "Syntax Error line 165: unmatched ')'"
+        "error": "Syntax Error line 164: unmatched ')'"
       },
       {
         "arch": "delta_net_dlgm",
-        "error": "Syntax Error line 458: unmatched ')'"
+        "error": "Syntax Error line 451: unmatched ')'"
       },
       {
         "arch": "delta_net_dmshf",
-        "error": "Syntax Error line 161: unmatched ')'"
+        "error": "Syntax Error line 157: unmatched ')'"
       },
       {
         "arch": "delta_net_dual_path_fusion",
-        "error": "Syntax Error line 368: unterminated string literal (detected at line 368)"
+        "error": "Syntax Error line 426: closing parenthesis ']' does not match opening parenthesis '(' on line 223"
       },
       {
         "arch": "delta_net_dyn_decay_fractal_gate",
-        "error": "Syntax Error line 233: unterminated string literal (detected at line 233)"
+        "error": "Syntax Error line 232: unterminated string literal (detected at line 232)"
       },
       {
         "arch": "delta_net_dyn_gate_mix",
-        "error": "Syntax Error line 143: unmatched ')'"
+        "error": "Syntax Error line 142: unmatched ')'"
       },
       {
         "arch": "delta_net_dynfuse",
-        "error": "Syntax Error line 413: unterminated string literal (detected at line 413)"
+        "error": "Syntax Error line 486: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_efagm",
@@ -180,19 +178,19 @@
       },
       {
         "arch": "delta_net_entropy_cagf_rc_norm",
-        "error": "Syntax Error line 164: unmatched ')'"
+        "error": "Syntax Error line 163: unmatched ')'"
       },
       {
         "arch": "delta_net_entropy_floor",
-        "error": "Syntax Error line 432: unmatched ')'"
+        "error": "Syntax Error line 425: unmatched ')'"
       },
       {
         "arch": "delta_net_entropy_kl_floor_gate",
-        "error": "Syntax Error line 164: unmatched ')'"
+        "error": "Syntax Error line 163: unmatched ')'"
       },
       {
         "arch": "delta_net_erfg",
-        "error": "Syntax Error line 187: unmatched ')'"
+        "error": "Syntax Error line 186: unmatched ')'"
       },
       {
         "arch": "delta_net_gae_ms3e",
@@ -200,31 +198,31 @@
       },
       {
         "arch": "delta_net_gtmlp",
-        "error": "Syntax Error line 387: unterminated string literal (detected at line 387)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_hafmg",
-        "error": "Syntax Error line 160: unmatched ')'"
+        "error": "Syntax Error line 156: unmatched ')'"
       },
       {
         "arch": "delta_net_hafs",
-        "error": "Syntax Error line 349: unmatched ')'"
+        "error": "Syntax Error line 497: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_hdsr",
-        "error": "Syntax Error line 264: unmatched ')'"
+        "error": "Syntax Error line 261: unmatched ')'"
       },
       {
         "arch": "delta_net_head_gate_ema",
-        "error": "Syntax Error line 446: unmatched ')'"
+        "error": "Syntax Error line 293: unmatched ')'"
       },
       {
         "arch": "delta_net_headgated",
-        "error": "Syntax Error line 406: unterminated string literal (detected at line 406)"
+        "error": "Syntax Error line 480: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_hefth",
-        "error": "Syntax Error line 172: unmatched ')'"
+        "error": "Syntax Error line 171: unmatched ')'"
       },
       {
         "arch": "delta_net_hgm_ident",
@@ -236,7 +234,7 @@
       },
       {
         "arch": "delta_net_hhmr",
-        "error": "Syntax Error line 176: unmatched ')'"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_hmgapf",
@@ -244,7 +242,7 @@
       },
       {
         "arch": "delta_net_hpaf",
-        "error": "Syntax Error line 441: unmatched ')'"
+        "error": "Syntax Error line 433: unmatched ')'"
       },
       {
         "arch": "delta_net_hrem",
@@ -252,7 +250,7 @@
       },
       {
         "arch": "delta_net_hsgm",
-        "error": "Syntax Error line 449: unterminated string literal (detected at line 449)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_hsigctx",
@@ -260,11 +258,11 @@
       },
       {
         "arch": "delta_net_htcg",
-        "error": "Syntax Error line 490: unmatched ']'"
+        "error": "Syntax Error line 486: unmatched ']'"
       },
       {
         "arch": "delta_net_htfr",
-        "error": "Syntax Error line 374: unterminated string literal (detected at line 374)"
+        "error": "Syntax Error line 445: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_htgmsm",
@@ -272,43 +270,43 @@
       },
       {
         "arch": "delta_net_hwg",
-        "error": "Syntax Error line 376: unterminated string literal (detected at line 376)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_hwggm",
-        "error": "Syntax Error line 395: unmatched ')'"
+        "error": "Syntax Error line 386: unmatched ')'"
       },
       {
         "arch": "delta_net_hybfloor",
-        "error": "Syntax Error line 506: closing parenthesis ')' does not match opening parenthesis '['"
+        "error": "Syntax Error line 492: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_hybrid_floor_gt",
-        "error": "Syntax Error line 257: unmatched ')'"
+        "error": "Syntax Error line 254: unmatched ')'"
       },
       {
         "arch": "delta_net_len_hgate_mixanneal",
-        "error": "Syntax Error line 307: unmatched ')'"
+        "error": "Syntax Error line 304: unmatched ')'"
       },
       {
         "arch": "delta_net_mafr",
-        "error": "Syntax Error line 403: unmatched ')'"
+        "error": "Syntax Error line 394: unmatched ')'"
       },
       {
         "arch": "delta_net_mfg",
-        "error": "Syntax Error line 379: unmatched ')'"
+        "error": "Syntax Error line 374: unmatched ')'"
       },
       {
         "arch": "delta_net_mor",
-        "error": "Syntax Error line 366: unterminated string literal (detected at line 366)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_ms_adaptive_gstat3",
-        "error": "Syntax Error line 181: unmatched ')'"
+        "error": "Syntax Error line 182: unmatched ')'"
       },
       {
         "arch": "delta_net_ms_gstat3_quota",
-        "error": "Syntax Error line 151: unmatched ')'"
+        "error": "Syntax Error line 150: unmatched ')'"
       },
       {
         "arch": "delta_net_ms_hsm_tempgate",
@@ -316,11 +314,11 @@
       },
       {
         "arch": "delta_net_ms_hsm_widefloor",
-        "error": "Syntax Error line 540: closing parenthesis ')' does not match opening parenthesis '['"
+        "error": "Syntax Error line 529: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_ms_resgate",
-        "error": "Syntax Error line 392: unterminated string literal (detected at line 392)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_mscmix_pointwise",
@@ -340,11 +338,11 @@
       },
       {
         "arch": "delta_net_ndg",
-        "error": "Syntax Error line 451: invalid decimal literal"
+        "error": "Syntax Error line 442: invalid decimal literal"
       },
       {
         "arch": "delta_net_oahmgr",
-        "error": "Syntax Error line 479: unmatched ')'"
+        "error": "Syntax Error line 466: unmatched ')'"
       },
       {
         "arch": "delta_net_omsgf",
@@ -352,11 +350,11 @@
       },
       {
         "arch": "delta_net_pathgated",
-        "error": "Syntax Error line 410: unterminated string literal (detected at line 410)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_pfr",
-        "error": "Syntax Error line 367: unmatched ')'"
+        "error": "Syntax Error line 361: unmatched ')'"
       },
       {
         "arch": "delta_net_phfg",
@@ -364,7 +362,7 @@
       },
       {
         "arch": "delta_net_phsg5",
-        "error": "Syntax Error line 166: unterminated string literal (detected at line 166)"
+        "error": "Syntax Error line 164: unterminated string literal (detected at line 164)"
       },
       {
         "arch": "delta_net_psafg",
@@ -376,11 +374,11 @@
       },
       {
         "arch": "delta_net_qsr",
-        "error": "Syntax Error line 321: unmatched ')'"
+        "error": "Syntax Error line 320: unmatched ')'"
       },
       {
         "arch": "delta_net_rggf",
-        "error": "Syntax Error line 342: unterminated string literal (detected at line 342)"
+        "error": "Syntax Error line 13: invalid syntax"
       },
       {
         "arch": "delta_net_rmsgm",
@@ -396,15 +394,15 @@
       },
       {
         "arch": "delta_net_sigf_ptu",
-        "error": "Syntax Error line 303: unmatched ')'"
+        "error": "Syntax Error line 301: unmatched ')'"
       },
       {
         "arch": "delta_net_sparsemax_temperature",
-        "error": "Syntax Error line 191: unmatched ')'"
+        "error": "Syntax Error line 188: unmatched ')'"
       },
       {
         "arch": "delta_net_spectral_fusion",
-        "error": "Syntax Error line 216: unmatched ')'"
+        "error": "Syntax Error line 215: unmatched ')'"
       },
       {
         "arch": "delta_net_ssg_sparsemax_temp",
@@ -412,36 +410,47 @@
       },
       {
         "arch": "delta_net_syngf",
-        "error": "Syntax Error line 187: unmatched ')'"
+        "error": "Syntax Error line 186: unmatched ')'"
       },
       {
         "arch": "delta_net_taigr_xs",
-        "error": "Syntax Error line 232: unmatched ')'"
+        "error": "Syntax Error line 230: unmatched ')'"
       },
       {
         "arch": "delta_net_tapr",
-        "error": "Syntax Error line 622: unmatched ']'"
+        "error": "Syntax Error line 605: unmatched ']'"
       },
       {
         "arch": "delta_net_tareia",
-        "error": "Syntax Error line 577: unmatched ')'"
+        "error": "Syntax Error line 563: unmatched ')'"
       },
       {
         "arch": "delta_net_tarf",
-        "error": "Syntax Error line 368: unterminated string literal (detected at line 368)"
+        "error": "Syntax Error line 456: closing parenthesis ')' does not match opening parenthesis '['"
       },
       {
         "arch": "delta_net_triscale",
-        "error": "Syntax Error line 358: unmatched ')'"
+        "error": "Syntax Error line 354: unmatched ')'"
       },
       {
         "arch": "delta_net_udmag",
         "error": "Syntax Error line 13: invalid syntax"
       }
     ],
-    "import_ok": [],
+    "import_ok": [
+      "delta_net_aeoc"
+    ],
     "import_failed": [],
-    "class_found": [],
+    "class_found": [
+      {
+        "arch": "delta_net_aeoc",
+        "classes": [
+          "DeltaNet",
+          "_DepthwiseFIRConv1d",
+          "_ShortConvolution"
+        ]
+      }
+    ],
     "class_not_found": []
   }
 }

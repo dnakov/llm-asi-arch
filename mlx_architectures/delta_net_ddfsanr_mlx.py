@@ -1,120 +1,26 @@
-from __future__ import annotations
-
-"""
-MLX-converted architecture: delta_net_ddfsanr
-Auto-converted from PyTorch to MLX format
-"""
-
-# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
-import mlx.core as mx
-import mlx.nn as nn
-from typing import Tuple, Optional, List, Dict
-
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
-    if "b l(h, d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
-        b, l, hd = tensor.shape
-        d = hd // h
-        return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l(h, d)" in pattern:
-        b, l, h, d = tensor.shape
-        return tensor.reshape(b, l, h * d)
-    elif "b l h d -> b h l d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h l d -> b l h d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h(n, c) d -> b h n c d" in pattern:
-        c = kwargs.get('c', 1)
-        b, h, nc, d = tensor.shape
-        n = nc // c
-        return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h(n, c) d" in pattern:
-        b, h, n, c, d = tensor.shape
-        return tensor.reshape(b, h, n * c, d)
-    else:
-        # Fallback: return tensor as-is
-        return tensor
-
-def _l2norm(x:, mx.array) -> mx.array:
-    """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
-        keepdims=True).clip(min=1e-8)
-
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
-    """Masked fill operation"""
-    return mx.where(mask, value, tensor)
-
-def _get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
-    cu_seqlens = mx.array([0, attention_mask.shape[-1]])
-    max_len = attention_mask.shape[-1]
-    return indices, cu_seqlens, max_len
-
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
-    """Index first axis"""
-    return tensor[indices]
-
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
-    """Pad input back to original shape"""
-    # Simplified version
-    return tensor.reshape(batch_size, seq_len, -1)
-
-class _ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
-        super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
-        self.activation = activation
-        
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
-        # x: (B, L, D)
-        x_conv = x.transpose(0, 2, 1)  # (B, D, L)
-        out = self.conv(x_conv)
-        out = out[:, :, :x.shape[1]]  # Causal truncation
-        out = out.transpose(0, 2, 1)  # (B, L, D)
-        
-        if self.activation == 'silu':
-            out = nn.silu(out)
-        elif self.activation == 'gelu':
-            out = nn.gelu(out)
-            
-        if output_final_state:
-            return out
-        None  # Simplified - no cache state
-        return out
-
-
 # -*- coding: utf-8 -*-
 """
 DeltaNet – Dynamic Dual-Path Fusion with Schedule-Adaptive Normalised Residuals (DDFSANR)
+==========================================================================================
 Identifier: *delta_net_ddfsanr*
 
 Core innovation:
-    - Hybridizes evidence-backed innovations from CAGF(-RC), ATUPS, AGHM, and AEMF: combines information-efficient content-aware gating, progressive per-head specialization, and dynamic adaptive control of local/global blending while addressing global-context variance inflation and extraction failures.
-    - Breakthrough: (**1**) Adds a *post-fusion per-head nn.RMSNorm* **after** residual convolutional injection (Block-State/Hyena, insight) to control variance inflation and preserve both global/extractive and local/physical reasoning performance.
-    - (**2**) The convolutional (local) residual path is dynamically(per-token, per-head) modulated by a tiny gating MLP over hidden+short path stats, *not* just a static parameter—guaranteeing gradient but making local signal adapt based on context (CAGF-RC+BST/HGST).
-    - (**3**) Progressive per-head temperature untying(ATUPS, principle; schedule 0→1), with learnable log_tau and untie schedule for maximally adaptive specialisation.
-    - (**4**) Multi-residual path injection: a small probability floor ensures every path(esp., local/conv) always receives a nonzero mixture weight for robustness blending schedule control from AEMF/BCMF.
-    - (**5**) Per-head, per-path statistics enrich the gate input(mean, var, abs-mean, ℓ2), providing relational depth for both reasoning and extraction(from, CAGF, evidence).
+    - Hybridizes evidence-backed innovations from CAGF(-RC), ATUPS, AGHM, and AEMF: combines information-efficient content-aware gating, progressive per-head specialization, and dynamic adaptive control of local/global blending, while addressing global-context variance inflation and extraction failures.
+    - Breakthrough: (**1**) Adds a *post-fusion per-head RMSNorm* **after** residual convolutional injection (Block-State/Hyena insight) to control variance inflation and preserve both global/extractive and local/physical reasoning performance.
+    - (**2**) The convolutional (local) residual path is dynamically (per-token, per-head) modulated by a tiny gating MLP over hidden+short path stats, *not* just a static parameter—guaranteeing gradient, but making local signal adapt based on context (CAGF-RC+BST/HGST).
+    - (**3**) Progressive per-head temperature untying (ATUPS principle; schedule 0→1), with learnable log_tau and untie schedule for maximally adaptive specialisation.
+    - (**4**) Multi-residual path injection: a small probability floor ensures every path (esp. local/conv) always receives a nonzero mixture weight for robustness, blending schedule control from AEMF/BCMF.
+    - (**5**) Per-head, per-path statistics enrich the gate input (mean, var, abs-mean, ℓ2), providing relational depth for both reasoning and extraction (from CAGF evidence).
     - (**6**) Strict sub-quadratic O(Nd) complexity and rigorous batch-agnostic, chunked computation.
 
-This fusion provides breakthrough generalization for both reasoning and extraction/QA tasks, enabling *local/global context variance control* and *dynamic contextual routing* under heavy efficiency constraints guided by multi-experiment meta-insights and latest research.
+This fusion provides breakthrough generalization for both reasoning and extraction/QA tasks, enabling *local/global context variance control* and *dynamic contextual routing* under heavy efficiency constraints, guided by multi-experiment meta-insights and latest research.
 """
+from __future__ import annotations
 
 import math
+from typing import Optional, Tuple, List, Dict
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.nn as F
 
 
 

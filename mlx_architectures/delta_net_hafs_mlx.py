@@ -1,102 +1,7 @@
-from __future__ import annotations
-
-"""
-MLX-converted architecture: delta_net_hafs
-Auto-converted from PyTorch to MLX format
-"""
-
-# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
-import mlx.core as mx
-import mlx.nn as nn
-from typing import Tuple, Optional, List, Dict
-
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
-    if "b l(h, d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
-        b, l, hd = tensor.shape
-        d = hd // h
-        return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l(h, d)" in pattern:
-        b, l, h, d = tensor.shape
-        return tensor.reshape(b, l, h * d)
-    elif "b l h d -> b h l d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h l d -> b l h d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h(n, c) d -> b h n c d" in pattern:
-        c = kwargs.get('c', 1)
-        b, h, nc, d = tensor.shape
-        n = nc // c
-        return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h(n, c) d" in pattern:
-        b, h, n, c, d = tensor.shape
-        return tensor.reshape(b, h, n * c, d)
-    else:
-        # Fallback: return tensor as-is
-        return tensor
-
-def _l2norm(x:, mx.array) -> mx.array:
-    """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
-        keepdims=True).clip(min=1e-8)
-
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
-    """Masked fill operation"""
-    return mx.where(mask, value, tensor)
-
-def _get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
-    cu_seqlens = mx.array([0, attention_mask.shape[-1]])
-    max_len = attention_mask.shape[-1]
-    return indices, cu_seqlens, max_len
-
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
-    """Index first axis"""
-    return tensor[indices]
-
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
-    """Pad input back to original shape"""
-    # Simplified version
-    return tensor.reshape(batch_size, seq_len, -1)
-
-class _ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
-        super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
-        self.activation = activation
-        
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
-        # x: (B, L, D)
-        x_conv = x.transpose(0, 2, 1)  # (B, D, L)
-        out = self.conv(x_conv)
-        out = out[:, :, :x.shape[1]]  # Causal truncation
-        out = out.transpose(0, 2, 1)  # (B, L, D)
-        
-        if self.activation == 'silu':
-            out = nn.silu(out)
-        elif self.activation == 'gelu':
-            out = nn.gelu(out)
-            
-        if output_final_state:
-            return out
-        None  # Simplified - no cache state
-        return out
-
-
 # -*- coding: utf-8 -*-
 """
-DeltaNet – Head-Adaptive Floor & Sparsity (HAFS)
+DeltaNet – Head-Adaptive Floor & Sparsity (HAFS) - MLX Implementation
+==============================================
 Identifier: delta_net_hafs
 
 This evolution unifies the strongest ideas across previous DeltaNet variants
@@ -105,33 +10,41 @@ weaknesses:
 
 1. Head-Adaptive, Annealed Floor  
    •   Each *head / path* owns a learnable **floor parameter** (sigmoid in
-       [0 1]).  A global exponential **annealing schedule** multiplies this
-       floor starting at ``floor_init`` (default 5 %) and converging to
+       [0,1]).  A global exponential **annealing schedule** multiplies this
+       floor, starting at ``floor_init`` (default 5 %) and converging to
        ``floor_final`` (default 1 %).  This guarantees **persistent local
-       capacity** (unlike, HTNG) while still enabling near-exclusive routing(unlike, IPEG’s fixed ε-floor).
+       capacity** (unlike HTNG) while still enabling near-exclusive routing
+       (unlike IPEG's fixed ε-floor).
 
 2. Per-Head Temperature (τ)  
    •   Retains the proven benefits of *per-head/*per-path temperature – sharp
        when useful, smooth otherwise – without extra runtime cost.
 
 3. Identity & Conv Residual Safeguards  
-   •   A minimal learnable **identity residual** (copies token surface, form)
-       and a **conv residual** (averaged FIR, outputs) ensure gradient flow and
+   •   A minimal, learnable **identity residual** (copies token surface form)
+       and a **conv residual** (averaged FIR outputs) ensure gradient flow and
        local information retention even if the softmax gate collapses.
 
 4. Expressive Gate with Branch Statistics  
-   •   A two-layer GELU MLP receives the hidden state plus 16 statistics(mean, var, abs-mean, ℓ2) aggregated from the four branches producing
+   •   A two-layer GELU MLP receives the hidden state plus 16 statistics
+       (mean, var, abs-mean, ℓ2) aggregated from the four branches, producing
        per-head logits.
 
 The layer remains **strictly O(N)** thanks to chunk-wise Δ-rule retrieval and
-FIR convolutions.  All tensor reshaping uses **einops.rearrange** for dynamic batch-agnostic shapes.  Class name and forward signature are unchanged – this
+FIR convolutions.  All tensor reshaping uses **einops.rearrange** for dynamic,
+batch-agnostic shapes.  Class name and forward signature are unchanged – this
 is a drop-in replacement.
+
+Converted to MLX by Claude Code.
 """
+from __future__ import annotations
 
 import math
+from typing import Optional, Tuple, Dict, Any
+
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.nn as F
+from einops import rearrange
 
 
 
@@ -216,7 +129,7 @@ def _delta_rule_chunkwise(
 class _DepthwiseFIRConv1d(nn.Module):
     """Per-head per-channel causal FIR with identity (Dirac) initialisation."""
 
-    def __init__(self, num_heads: int, head_dim: int
+    def __init__(self, num_heads: int, head_dim: int,
     kernel_size: int = 31
     noise_std: float = 1e-2) -> None:
         super().__init__()

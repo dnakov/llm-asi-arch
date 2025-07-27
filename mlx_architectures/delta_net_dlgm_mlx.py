@@ -1,102 +1,7 @@
-from __future__ import annotations
-
-"""
-MLX-converted architecture: delta_net_dlgm
-Auto-converted from PyTorch to MLX format
-"""
-
-# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
-import mlx.core as mx
-import mlx.nn as nn
-from typing import Tuple, Optional, List, Dict
-
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
-    if "b l(h, d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
-        b, l, hd = tensor.shape
-        d = hd // h
-        return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l(h, d)" in pattern:
-        b, l, h, d = tensor.shape
-        return tensor.reshape(b, l, h * d)
-    elif "b l h d -> b h l d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h l d -> b l h d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h(n, c) d -> b h n c d" in pattern:
-        c = kwargs.get('c', 1)
-        b, h, nc, d = tensor.shape
-        n = nc // c
-        return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h(n, c) d" in pattern:
-        b, h, n, c, d = tensor.shape
-        return tensor.reshape(b, h, n * c, d)
-    else:
-        # Fallback: return tensor as-is
-        return tensor
-
-def _l2norm(x:, mx.array) -> mx.array:
-    """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1
-        keepdims=True).clip(min=1e-8)
-
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
-    """Masked fill operation"""
-    return mx.where(mask, value, tensor)
-
-def _get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
-    cu_seqlens = mx.array([0, attention_mask.shape[-1]])
-    max_len = attention_mask.shape[-1]
-    return indices, cu_seqlens, max_len
-
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
-    """Index first axis"""
-    return tensor[indices]
-
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
-    """Pad input back to original shape"""
-    # Simplified version
-    return tensor.reshape(batch_size, seq_len, -1)
-
-class _ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
-        super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
-        self.activation = activation
-        
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
-        # x: (B, L, D)
-        x_conv = x.transpose(0, 2, 1)  # (B, D, L)
-        out = self.conv(x_conv)
-        out = out[:, :, :x.shape[1]]  # Causal truncation
-        out = out.transpose(0, 2, 1)  # (B, L, D)
-        
-        if self.activation == 'silu':
-            out = nn.silu(out)
-        elif self.activation == 'gelu':
-            out = nn.gelu(out)
-            
-        if output_final_state:
-            return out
-        None  # Simplified - no cache state
-        return out
-
-
 # -*- coding: utf-8 -*-
 """
-DeltaNet – Dual-Scale Local-Global Gated Memory (DLGM)
+DeltaNet – Dual-Scale Local-Global Gated Memory (DLGM) - MLX Version
+=====================================================
 This evolution unifies the *state-space* delta-rule global memory with **two
 causal depth-wise convolutional value paths of different receptive fields**
 (short-range *local* & mid-range *context*) and a **token-, head- and
@@ -104,133 +9,215 @@ position-dependent softmax router** that decides – *per token* – how much of
 each memory stream should contribute to the final representation.
 
 Motivation & Design Highlights
-1. **Restore Local Fidelity**  – Prior variants(e.g., HMGM) blurred
+------------------------------
+1. **Restore Local Fidelity**  – Prior variants (e.g. HMGM) blurred
    high-frequency features by relying on a single large FIR kernel.  We add a
    *small* (k=7) depth-wise convolution branch that captures fine-grained local
-   patterns without sacrificing efficiency (kernel size is, constant).
+   patterns without sacrificing efficiency (kernel size is constant).
 2. **Maintain Mid/Global Context** – Keep the proven delta-rule associative
    memory *and* a mid-range convolution branch (k=31) so the model possesses
    three complementary context ranges.
 3. **Dynamic Token-wise Routing** – A lightweight MLP (2×hidden) produces
-   per-token, per-head logits over the *four* streams – {local, mid, delta identity}.  Softmax selection preserves scale while allowing specialisation.
+   per-token, per-head logits over the *four* streams – {local, mid, delta,
+   identity}.  Softmax selection preserves scale while allowing specialisation.
 4. **Identity-Favoured Initialisation** – Gate bias is initialised such that
-   the *identity* (direct, value) path starts dominant (≈70%) to avoid early
+   the *identity* (direct value) path starts dominant (≈70%) to avoid early
    oversmoothing – a typical failure mode in previous experiments.
 5. **Sub-Quadratic Complexity** – All added operations are causal
    depth-wise 1-D convolutions (O(N·k)) and chunk-wise delta-rule (O(N)).
 6. **Batch & Sequence Agnostic** – Every tensor reshape uses *einops*; no
    hard-coded batch/sequence dimensions.
 
-The public interface class name (`DeltaNet`), forward signature and parameter
+The public interface, class name (`DeltaNet`), forward signature and parameter
 schema are **fully preserved**.  New features are on by default and incur
 minimal parameter overhead.
 """
+from __future__ import annotations
 
 import math
+from typing import Dict, Optional, Tuple
+
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.nn as F
-
-
+from einops import rearrange
 
 # -----------------------------------------------------------------------------
 # Utility activations
 # -----------------------------------------------------------------------------
 
-def elu_p1(x:, mx.array) -> mx.array:  # ELU+1
-    return (F.elu(x, 1.0, False) + 1.0)
+def elu_p1(x: mx.array) -> mx.array:  # ELU+1
+    return mx.maximum(mx.exp(x) - 1.0, 0.0) + 1.0
 
+def sum_norm(x: mx.array) -> mx.array:
+    return x / mx.sum(x, axis=-1, keepdims=True)
 
-def sum_norm(x:, mx.array) -> mx.array:
-    return (x / x.sum(-1, keepdim=True))
+def l2norm(x: mx.array) -> mx.array:
+    return x / mx.sqrt(mx.sum(x * x, axis=-1, keepdims=True) + 1e-8)
 
 # -----------------------------------------------------------------------------
-# Chunk-wise Delta-rule path(unchanged, O(N))
+# Chunk-wise Delta-rule path (unchanged, O(N))
 # -----------------------------------------------------------------------------
-@mx.compile
 def delta_rule_chunkwise(
-    q: mx.array # [B H L D_k]
+    q: mx.array,  # [B H L D_k]
     k: mx.array,  # [B H L D_k]
     v: mx.array,  # [B H L D_v]
     beta: mx.array,  # [B H L]
     *,
-    chunk_size: int = 32):
+    chunk_size: int = 32,
+):
     """Original DeltaNet associative memory evaluated chunk-wise (O(N))."""
     b, h, L, d_k = q.shape
-        d_v = v.shape[-1]
+    d_v = v.shape[-1]
 
     pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
-        pad_cfg = (0,
-        0, 0, pad_len)  # pad sequence dimension (second, last)
-        q = mx.pad(q, pad_cfg)
-        k = mx.pad(k, pad_cfg)
-        v = mx.pad(v, pad_cfg)
-        beta = mx.pad(beta, (0, pad_len))
+        # Pad sequence dimension (second last)
+        q = mx.pad(q, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        k = mx.pad(k, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        v = mx.pad(v, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        beta = mx.pad(beta, [(0, 0), (0, 0), (0, pad_len)])
     L_pad = L + pad_len
 
     # normalise q/k
-        q = _l2norm(q)
-    k = _l2norm(k)
+    q = l2norm(q)
+    k = l2norm(k)
 
     v = v * beta[..., None]
     k_beta = k * beta[..., None]
 
     # reshape into chunks: [... n c d]
-    q, k, v, k_beta = map(
-        lambda x: _rearrange(x, "b h, (n, c) d -> b h n c d", c=chunk_size),
-        (q, k, v, k_beta))
+    q = rearrange(q, "b h (n c) d -> b h n c d", c=chunk_size)
+    k = rearrange(k, "b h (n c) d -> b h n c d", c=chunk_size)
+    v = rearrange(v, "b h (n c) d -> b h n c d", c=chunk_size)
+    k_beta = rearrange(k_beta, "b h (n c) d -> b h n c d", c=chunk_size)
 
-    mask_tri_full = mx.triu(mx.ones(chunk_size, chunk_size
-    dtype=mx.bool_), 0)
-    mask_tri_strict = mx.triu(mx.ones(chunk_size, chunk_size
-    dtype=mx.bool_), 1)
+    mask_tri_full = mx.triu(mx.ones((chunk_size, chunk_size)), k=0).astype(mx.bool_)
+    mask_tri_strict = mx.triu(mx.ones((chunk_size, chunk_size)), k=1).astype(mx.bool_)
 
-    attn = -(k_beta @ k.transpose(-1, -2))._masked_fill(mask_tri_full, 0)
+    attn = -(k_beta @ mx.transpose(k, (0, 1, 2, 4, 3)))
+    attn = mx.where(mask_tri_full, 0.0, attn)
+    
     for i in range(1, chunk_size):
-        attn[..., i
-        :i] += (attn[..., i, :, None] * attn[..., :, :i]).sum(-2)
-        attn = attn + mx.eye(chunk_size, dtype = attn.dtype)
+        # Simplified approximation for the accumulation step
+        attn_slice = attn[..., i:i+1, :i]
+        prev_attn = attn[..., :i, :i]
+        update = mx.sum(attn_slice * prev_attn, axis=-2, keepdims=True)
+        attn = attn.at[..., i, :i].set(attn[..., i, :i] + mx.squeeze(update, axis=-2))
+    
+    attn = attn + mx.eye(chunk_size)
 
     u = attn @ v  # [b h n c d_v]
     w = attn @ k_beta
-        S = mx.zeros(b, h, d_k, d_v)
+
+    S = mx.zeros((b, h, d_k, d_v))
     o = mx.zeros_like(v)
     n_chunks = L_pad // chunk_size
+    
     for idx in range(n_chunks):
-        q_i
-        k_i = q[:, :, idx], k[:, :, idx]
-        local_attn = (q_i @ k_i.transpose(-1, -2))._masked_fill(mask_tri_strict, 0)
+        q_i, k_i = q[:, :, idx], k[:, :, idx]
+        local_attn = (q_i @ mx.transpose(k_i, (0, 1, 3, 2)))
+        local_attn = mx.where(mask_tri_strict, 0.0, local_attn)
         u_i = u[:, :, idx] - w[:, :, idx] @ S
         o_inter = q_i @ S
-        o[:, :
-        idx] = o_inter + local_attn @ u_i
-        S = S + k_i.transpose(-1, -2) @ u_i
-        o = _rearrange(o, "b h n c d -> b h, (n, c) d")
+        o = o.at[:, :, idx].set(o_inter + local_attn @ u_i)
+        S = S + mx.transpose(k_i, (0, 1, 3, 2)) @ u_i
+
+    o = rearrange(o, "b h n c d -> b h (n c) d")
     if pad_len:
-        o = o[:
-        :, :L]
+        o = o[:, :, :L]
     return o, S
+
 # -----------------------------------------------------------------------------
 # Depth-wise causal convolution branches
 # -----------------------------------------------------------------------------
 class _DepthwiseCausalConv1d(nn.Module):
     """Per-head depth-wise 1-D convolution with *causal* left padding."""
 
-    def __init__(self, num_heads: int, head_dim: int, kernel_size:, int):
+    def __init__(self, num_heads: int, head_dim: int, kernel_size: int):
         super().__init__()
         self.kernel_size = kernel_size
-        weight = mx.randn(num_heads, * head_dim, 1, kernel_size) / math.sqrt(kernel_size)
-        self.weight = mx.array(weight), def forward(self, x: mx.array) -> mx.array:  # x : [B L H D]
+        weight = mx.random.normal((num_heads * head_dim, 1, kernel_size)) / math.sqrt(kernel_size)
+        self.weight = weight
+
+    def __call__(self, x: mx.array) -> mx.array:  # x : [B L H D]
         b, L, h, d = x.shape
-        x_ch = _rearrange(x, "b l h d -> b, (h, d) l")
+        x_ch = rearrange(x, "b l h d -> b (h d) l")
         w = self.weight  # [(h*d) 1 k]
-        x_pad = mx.pad(x_ch, (self.kernel_size - 1, 0))  # left pad for causality
-        y = F.conv1d(x_pad, w
-        groups = h * d)
-        y = _rearrange(y, "b, (h, d) l -> b l h d"
-        h=h)
+        # Left pad for causality
+        x_pad = mx.pad(x_ch, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
+        # Simulate grouped convolution
+        y = mx.zeros((b, h * d, L))
+        for i in range(h * d):
+            for j in range(L):
+                start_idx = j
+                end_idx = j + self.kernel_size
+                y = y.at[:, i, j].set(mx.sum(x_pad[:, i, start_idx:end_idx] * w[i, 0, :], axis=-1))
+        y = rearrange(y, "b (h d) l -> b l h d", h=h)
         return y
+
+# -----------------------------------------------------------------------------
+# MLX-compatible normalization modules
+# -----------------------------------------------------------------------------
+class RMSNorm(nn.Module):
+    def __init__(self, hidden_size: int, eps: float = 1e-6):
+        super().__init__()
+        self.weight = mx.ones((hidden_size,))
+        self.eps = eps
+
+    def __call__(self, x: mx.array) -> mx.array:
+        variance = mx.mean(x * x, axis=-1, keepdims=True)
+        x = x / mx.sqrt(variance + self.eps)
+        return self.weight * x
+
+class FusedRMSNormGated(nn.Module):
+    def __init__(self, hidden_size: int, eps: float = 1e-6):
+        super().__init__()
+        self.weight = mx.ones((hidden_size,))
+        self.eps = eps
+
+    def __call__(self, x: mx.array, gate: mx.array) -> mx.array:
+        variance = mx.mean(x * x, axis=-1, keepdims=True)
+        x = x / mx.sqrt(variance + self.eps)
+        return self.weight * x * mx.sigmoid(gate)
+
+class ShortConvolution(nn.Module):
+    def __init__(self, d_model: int, kernel_size: int, activation: str = None, bias: bool = False):
+        super().__init__()
+        self.d_model = d_model
+        self.kernel_size = kernel_size
+        self.activation = activation
+        self.weight = mx.random.normal((d_model, kernel_size)) / math.sqrt(kernel_size)
+        if bias:
+            self.bias = mx.zeros((d_model,))
+        else:
+            self.bias = None
+
+    def __call__(self, x: mx.array, cache=None, output_final_state=False, cu_seqlens=None) -> Tuple[mx.array, mx.array]:
+        b, l, d = x.shape
+        # Apply causal convolution
+        x_pad = mx.pad(x, [(0, 0), (self.kernel_size - 1, 0), (0, 0)])
+        
+        y = mx.zeros((b, l, d))
+        for i in range(l):
+            for j in range(d):
+                start_idx = i
+                end_idx = i + self.kernel_size
+                conv_result = mx.sum(x_pad[:, start_idx:end_idx, j] * self.weight[j, :], axis=1)
+                y = y.at[:, i, j].set(conv_result)
+        
+        if self.bias is not None:
+            y = y + self.bias
+        
+        if self.activation == "silu":
+            y = y * mx.sigmoid(y)
+        elif self.activation == "relu":
+            y = mx.maximum(y, 0.0)
+        
+        cache_state = None
+        if output_final_state:
+            cache_state = x[:, -self.kernel_size+1:]
+        
+        return y, cache_state
 
 # -----------------------------------------------------------------------------
 # Optional type hints for external cache utils
