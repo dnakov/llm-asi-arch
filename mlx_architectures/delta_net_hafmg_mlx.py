@@ -44,6 +44,13 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     elif pattern == "b h n c d -> b h (n c) d":
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
+    elif pattern == "b l h -> b h l":
+        return tensor.transpose(0, 2, 1)
+    elif pattern == "b l (h c) -> b l h c":
+        b, l, hc = tensor.shape
+        h = kwargs.get('h')
+        c = kwargs.get('c', hc // h)
+        return tensor.reshape(b, l, h, c)
     else:
         raise NotImplementedError(f"Pattern {pattern} not implemented")
 
@@ -82,7 +89,11 @@ class DepthwiseFIRConv1d(nn.Module):
         self.head_dim = head_dim
         
         filters = mx.zeros((num_heads, head_dim, self.kernel_size))
-        filters = filters.at[..., -1].set(1.0)
+        # MLX: Use where() to set last element
+        mask = mx.zeros_like(filters)
+        mask = mx.where(mx.arange(filters.shape[-1]) == filters.shape[-1] - 1, 1.0, 0.0)
+        mask = mx.broadcast_to(mask, filters.shape)
+        filters = mx.where(mask, 1.0, filters)
         filters = filters + noise_std * mx.random.normal(filters.shape)
         self.filters = filters
 
@@ -93,18 +104,24 @@ class DepthwiseFIRConv1d(nn.Module):
         
         x_pad = mx.pad(x_f, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
         
-        y = mx.zeros((b, h * d, l))
+        # Vectorized convolution implementation for MLX
+        y_list = []
         for i in range(h * d):
+            y_channel = []
             for j in range(l):
                 start_idx = j
                 end_idx = j + self.kernel_size
-                y = y.at[..., i, j].set(
-                    mx.sum(x_pad[..., i, start_idx:end_idx] * weight[i, 0, :])
-                )
+                if end_idx <= x_pad.shape[2]:
+                    window = x_pad[:, i, start_idx:end_idx]
+                    conv_result = mx.sum(window * weight[i, 0, :], axis=-1)
+                    y_channel.append(conv_result)
+                else:
+                    y_channel.append(mx.zeros((b,)))
+            y_list.append(mx.stack(y_channel, axis=1))
+        y = mx.stack(y_list, axis=1)
         
         return _rearrange(y, "b (h d) l -> b l h d", h=h)
 
-@mx.compile
 def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     """Chunk-wise delta rule implementation"""
     b, h, L, d_k = q.shape
@@ -147,7 +164,12 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
         attn_local = mx.where(mask_tri, 0, attn_local)
         
         u_i = u[:, :, idx] - w[:, :, idx] @ S
-        o = o.at[:, :, idx].set(q_i @ S + attn_local @ u_i)
+        output_chunk = q_i @ S + attn_local @ u_i
+        # Store output chunk in appropriate position
+        if idx == 0:
+            o = mx.expand_dims(output_chunk, 2)
+        else:
+            o = mx.concatenate([o, mx.expand_dims(output_chunk, 2)], axis=2)
         S = S + mx.transpose(k_i, [0, 1, 3, 2]) @ u_i
     
     o = _rearrange(o, "b h n c d -> b h (n c) d")
@@ -188,10 +210,9 @@ class ShortConvolution(nn.Module):
         self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=kernel_size-1, bias=bias)
 
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
-        x_conv = x.transpose(0, 2, 1)
-        y = self.conv(x_conv)
-        y = y[:, :, :x.shape[1]]
-        y = y.transpose(0, 2, 1)
+        # MLX Conv1d expects (batch, length, in_channels), x is already in this format
+        y = self.conv(x)
+        y = y[:, :x.shape[1], :]  # Trim to original sequence length
         
         if self.activation == "silu":
             y = nn.silu(y)

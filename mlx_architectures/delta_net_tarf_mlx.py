@@ -44,6 +44,13 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     elif pattern == "b h n c d -> b h (n c) d":
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
+    elif pattern == "b l h -> b h l":
+        return tensor.transpose(0, 2, 1)
+    elif pattern == "b l (h c) -> b l h c":
+        b, l, hc = tensor.shape
+        h = kwargs.get('h')
+        c = kwargs.get('c', hc // h)
+        return tensor.reshape(b, l, h, c)
     else:
         raise NotImplementedError(f"Pattern {pattern} not implemented")
 
@@ -82,7 +89,11 @@ class DepthwiseFIRConv1d(nn.Module):
         self.head_dim = head_dim
         
         filters = mx.zeros((num_heads, head_dim, self.kernel_size))
-        filters = filters.at[..., -1].set(1.0)
+        # MLX: Use where() to set last element
+        mask = mx.zeros_like(filters)
+        mask = mx.where(mx.arange(filters.shape[-1]) == filters.shape[-1] - 1, 1.0, 0.0)
+        mask = mx.broadcast_to(mask, filters.shape)
+        filters = mx.where(mask, 1.0, filters)
         filters = filters + noise_std * mx.random.normal(filters.shape)
         self.filters = filters
 
@@ -93,18 +104,19 @@ class DepthwiseFIRConv1d(nn.Module):
         
         x_pad = mx.pad(x_f, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
         
-        y = mx.zeros((b, h * d, l))
-        for i in range(h * d):
-            for j in range(l):
-                start_idx = j
-                end_idx = j + self.kernel_size
-                y = y.at[..., i, j].set(
-                    mx.sum(x_pad[..., i, start_idx:end_idx] * weight[i, 0, :])
-                )
+        # MLX: Vectorized convolution operation
+        y_list = []
+        for j in range(l):
+            start_idx = j
+            end_idx = j + self.kernel_size
+            x_slice = x_pad[:, :, start_idx:end_idx]  # (b, h*d, kernel_size)
+            conv_result = mx.sum(x_slice * weight[:, 0, :], axis=2)  # (b, h*d)
+            y_list.append(conv_result)
+        
+        y = mx.stack(y_list, axis=2)  # (b, h*d, l)
         
         return _rearrange(y, "b (h d) l -> b l h d", h=h)
 
-@mx.compile
 def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     """Chunk-wise delta rule implementation"""
     b, h, L, d_k = q.shape
@@ -130,25 +142,40 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     
     mask_tri = mx.triu(mx.ones((chunk_size, chunk_size)), k=1).astype(mx.bool_)
     
-    att_inv = mx.eye(chunk_size) - (k_beta @ mx.transpose(k, [0, 1, 2, 4, 3]))
-    att_inv = mx.where(mask_tri, 0, att_inv)
+    n_chunks = L_pad // chunk_size
     
-    u = att_inv @ v
-    w = att_inv @ k_beta
+    # Process chunks to compute attention inversions
+    att_inv_list = []
+    for idx in range(n_chunks):
+        k_beta_chunk = k_beta[:, :, idx]  # (b, h, chunk_size, d_k)
+        k_chunk = k[:, :, idx]  # (b, h, chunk_size, d_k)
+        
+        att_chunk = mx.matmul(k_beta_chunk, mx.transpose(k_chunk, [0, 1, 3, 2]))
+        att_inv_chunk = mx.eye(chunk_size) - att_chunk
+        att_inv_chunk = mx.where(mask_tri, 0, att_inv_chunk)
+        att_inv_list.append(att_inv_chunk)
+    
+    att_inv = mx.stack(att_inv_list, axis=2)  # (b, h, n_chunks, chunk_size, chunk_size)
+    
+    u = mx.matmul(att_inv, v)
+    w = mx.matmul(att_inv, k_beta)
     
     S = mx.zeros((b, h, d_k, v.shape[-1]))
-    o = mx.zeros_like(v)
+    o_chunks = []
     
-    for idx in range(L_pad // chunk_size):
+    for idx in range(n_chunks):
         q_i = q[:, :, idx]
         k_i = k[:, :, idx]
         
-        attn_local = q_i @ mx.transpose(k_i, [0, 1, 3, 2])
+        attn_local = mx.matmul(q_i, mx.transpose(k_i, [0, 1, 3, 2]))
         attn_local = mx.where(mask_tri, 0, attn_local)
         
-        u_i = u[:, :, idx] - w[:, :, idx] @ S
-        o = o.at[:, :, idx].set(q_i @ S + attn_local @ u_i)
-        S = S + mx.transpose(k_i, [0, 1, 3, 2]) @ u_i
+        u_i = u[:, :, idx] - mx.matmul(w[:, :, idx], S)
+        o_chunk = mx.matmul(q_i, S) + mx.matmul(attn_local, u_i)
+        o_chunks.append(o_chunk)
+        S = S + mx.matmul(mx.transpose(k_i, [0, 1, 3, 2]), u_i)
+    
+    o = mx.stack(o_chunks, axis=2)
     
     o = _rearrange(o, "b h n c d -> b h (n c) d")
     if pad_len > 0:
@@ -185,13 +212,31 @@ class ShortConvolution(nn.Module):
         self.kernel_size = kernel_size
         self.activation = activation
         
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=kernel_size-1, bias=bias)
+        # Manual convolution weights instead of Conv1d
+        self.weight = mx.random.normal((hidden_size, kernel_size, hidden_size)) * 0.02
+        if bias:
+            self.bias = mx.zeros(hidden_size)
+        else:
+            self.bias = None
 
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
-        x_conv = x.transpose(0, 2, 1)
-        y = self.conv(x_conv)
-        y = y[:, :, :x.shape[1]]
-        y = y.transpose(0, 2, 1)
+        # Manual causal convolution
+        b, l, d = x.shape
+        
+        # Pad for causal convolution
+        x_padded = mx.pad(x, [(0, 0), (self.kernel_size - 1, 0), (0, 0)])
+        
+        # Apply convolution manually
+        y_list = []
+        for i in range(l):
+            x_window = x_padded[:, i:i + self.kernel_size, :]  # (b, kernel_size, d)
+            # Apply weights: (d, kernel_size, d) * (b, kernel_size, d) -> (b, d)
+            conv_out = mx.sum(self.weight[None, :, :, :] * x_window[:, None, :, :], axis=(2, 3))
+            if self.bias is not None:
+                conv_out = conv_out + self.bias
+            y_list.append(conv_out)
+        
+        y = mx.stack(y_list, axis=1)  # (b, l, d)
         
         if self.activation == "silu":
             y = nn.silu(y)

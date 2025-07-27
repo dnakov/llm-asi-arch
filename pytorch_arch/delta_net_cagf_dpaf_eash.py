@@ -1,0 +1,324 @@
+# -*- coding: utf-8 -*-
+"""
+DeltaNet – Context-Conditioned Adaptive Gated Fusion with Dual-Phase Path Floor and Entropy-Annealed Gate Sharpening
+=====================================================================================
+# ... rest same as before ...
+"""
+from __future__ import annotations
+import math
+from typing import Optional, Tuple, TYPE_CHECKING
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from einops import rearrange
+from fla.layers.utils import get_unpad_data, index_first_axis, pad_input
+from fla.modules import FusedRMSNormGated, RMSNorm, ShortConvolution
+from fla.modules.l2norm import l2norm
+
+# ---------------------------------------------
+def elu_p1(x):
+    return (F.elu(x, 1.0, False) + 1.0).to(x)
+def sum_norm(x):
+    return (x / x.sum(-1, keepdim=True)).to(x)
+
+class DepthwiseFIRConv1d(nn.Module):
+    def __init__(self, num_heads, head_dim, kernel_size: int, noise_std: float = 0.02):
+        super().__init__()
+        self.kernel_size = kernel_size
+        filt = torch.zeros(num_heads, head_dim, kernel_size)
+        filt[..., -1] = 1.0
+        filt += noise_std * torch.randn_like(filt)
+        self.filters = nn.Parameter(filt)
+    def forward(self, x):
+        b, l, h, d = x.shape
+        weight = rearrange(self.filters, 'h d k -> (h d) 1 k')
+        x_flat = rearrange(x, 'b l h d -> b (h d) l')
+        x_pad = F.pad(x_flat, (self.kernel_size - 1, 0))
+        y = F.conv1d(x_pad, weight, groups=h * d)
+        return rearrange(y, 'b (h d) l -> b l h d', h=h)
+
+@torch.compile
+def delta_rule_chunkwise(q, k, v, beta, *, chunk_size: int = 32):
+    b, h, L, d_k = q.shape
+    pad_len = (chunk_size - L % chunk_size) % chunk_size
+    if pad_len:
+        pad_cfg = (0, 0, 0, pad_len)
+        q = F.pad(q, pad_cfg)
+        k = F.pad(k, pad_cfg)
+        v = F.pad(v, pad_cfg)
+        beta = F.pad(beta, (0, pad_len))
+    L_pad = L + pad_len
+    q = l2norm(q)
+    k = l2norm(k)
+    v = v * beta[..., None]
+    k_beta = k * beta[..., None]
+    q, k, v, k_beta = map(
+        lambda t: rearrange(t, 'b h (n c) d -> b h n c d', c=chunk_size),
+        (q, k, v, k_beta))
+    tri = torch.triu(torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=q.device), 0)
+    attn = -(k_beta @ k.transpose(-1,-2)).masked_fill(tri, 0)
+    for i in range(1, chunk_size):
+        attn[..., i, :i] += (attn[..., i, :, None].clone() * attn[..., :, :i].clone()).sum(-2)
+    attn = attn + torch.eye(chunk_size, dtype=attn.dtype, device=q.device)
+    u = attn @ v
+    w = attn @ k_beta
+    S = k.new_zeros(b, h, d_k, v.shape[-1])
+    o = torch.zeros_like(v)
+    tri_strict = torch.triu(torch.ones(chunk_size, chunk_size, dtype=torch.bool, device=q.device), 1)
+    for idx in range(L_pad // chunk_size):
+        q_i, k_i = q[:, :, idx], k[:, :, idx]
+        attn_local = (q_i @ k_i.transpose(-1, -2)).masked_fill_(tri_strict, 0)
+        u_i = u[:, :, idx] - w[:, :, idx] @ S
+        o[:, :, idx] = q_i @ S + attn_local @ u_i
+        S = S + k_i.transpose(-1, -2) @ u_i
+    o = rearrange(o, 'b h n c d -> b h (n c) d')
+    if pad_len: o = o[:, :, :L]
+    return o, S
+
+if TYPE_CHECKING:
+    from fla.models.utils import Cache
+
+class DeltaNet(nn.Module):
+    """DeltaNet with adaptive dual-phase path floor, content-adaptive gating, and entropy-annealed regularisation."""
+    def __init__(self,
+        mode: str = "cagf_dpaf_eash",
+        d_model: int | None = None,
+        hidden_size: int = 1024,
+        expand_k: float = 1.0,
+        expand_v: float = 1.0,
+        num_heads: int = 4,
+        use_beta: bool = True,
+        use_gate: bool = False,
+        use_short_conv: bool = True,
+        conv_size: int = 4,
+        conv_bias: bool = False,
+        allow_neg_eigval: bool = False,
+        layer_idx: int | None = None,
+        qk_activation: str = "silu",
+        qk_norm: str = "l2",
+        norm_eps: float = 1e-5,
+        # FIR kernel sizes
+        fir_kernel_size_short: int = 5,
+        fir_kernel_size_long: int = 64,
+        fir_noise_std: float = 2e-2,
+        # Fusion gate
+        fusion_hidden_mult: int = 2,
+        fusion_dropout: float = 0.0,
+        # Dual-phase floor schedule
+        epsilon_init: float = 0.10,
+        epsilon_final: float = 0.025,
+        epsilon_decay_steps: int = 4000,
+        # Entropy annealing
+        entropy_reg_init: float = 0.02,
+        entropy_reg_final: float = 0.001,
+        entropy_decay_steps: int = 12000,
+        # Per-head learnable temp
+        temp_init: float = 1.0,
+        **kwargs,
+    ):
+        super().__init__()
+        if d_model is not None:
+            hidden_size = d_model
+        self.mode = mode
+        self.qk_activation = qk_activation
+        self.qk_norm = qk_norm
+        self.hidden_size = hidden_size
+        self.expand_k = expand_k
+        self.expand_v = expand_v
+        self.num_heads = num_heads
+        self.use_beta = use_beta
+        self.use_gate = use_gate
+        self.use_short_conv = use_short_conv
+        self.conv_size = conv_size
+        self.conv_bias = conv_bias
+        self.allow_neg_eigval = allow_neg_eigval
+        self.layer_idx = layer_idx
+        self.key_dim = int(hidden_size * expand_k)
+        self.value_dim = int(hidden_size * expand_v)
+        self.head_k_dim = self.key_dim // num_heads
+        self.head_v_dim = self.value_dim // num_heads
+        assert self.key_dim % num_heads == 0 and self.value_dim % num_heads == 0
+        self.q_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
+        self.k_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
+        self.v_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+        if use_beta:
+            self.b_proj = nn.Linear(hidden_size, num_heads, bias=False)
+        if use_short_conv:
+            act = "silu" if qk_activation == "silu" else None
+            self.q_conv1d = ShortConvolution(self.key_dim, conv_size, activation=act, bias=conv_bias)
+            self.k_conv1d = ShortConvolution(self.key_dim, conv_size, activation=act, bias=conv_bias)
+            self.v_conv1d = ShortConvolution(self.value_dim, conv_size, activation="silu", bias=conv_bias)
+        else:
+            raise UserWarning("ShortConvolution is mandatory for DeltaNet stability.")
+        self.local_fir_short = DepthwiseFIRConv1d(num_heads, self.head_v_dim, kernel_size=fir_kernel_size_short, noise_std=fir_noise_std)
+        self.local_fir_long = DepthwiseFIRConv1d(num_heads, self.head_v_dim, kernel_size=fir_kernel_size_long, noise_std=fir_noise_std)
+        # Content adaptive gate: [hidden, per-head local stats, per-branch norm, pairwise branch ||diff||]
+        self.stat_dim = 4
+        in_dim = hidden_size + self.num_heads * (self.stat_dim * 4 + 4 + 6) # simplified: stats for 4 branches, L2 norm per, pairwise 6 diffs
+        hidden_gate_dim = hidden_size * fusion_hidden_mult // 2
+        self.fusion_gate_mlp = nn.Sequential(
+            nn.Linear(in_dim, hidden_gate_dim, bias=True),
+            nn.GELU(),
+            nn.Linear(hidden_gate_dim, self.num_heads * 4, bias=True)
+        )
+        with torch.no_grad():
+            bias = self.fusion_gate_mlp[-1].bias
+            bias.zero_()
+            bias[3::4] = 2.0 # value
+            bias[2::4] = 1.2 # Δ rule
+        self.log_temp = nn.Parameter(torch.full((self.num_heads,1), math.log(temp_init)))
+        # Scheduling for path floor (dual-phase) and entropy
+        self.epsilon_init = float(epsilon_init)
+        self.epsilon_final = float(epsilon_final)
+        self.epsilon_decay_steps = int(epsilon_decay_steps)
+        self.entropy_reg_init = float(entropy_reg_init)
+        self.entropy_reg_final = float(entropy_reg_final)
+        self.entropy_decay_steps = int(entropy_decay_steps)
+        self.register_buffer('_step', torch.zeros(1, dtype=torch.long), persistent=False)
+        # Output norm/proj
+        if self.use_gate:
+            self.g_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+            self.o_norm = FusedRMSNormGated(self.head_v_dim, eps=norm_eps)
+        else:
+            self.o_norm = RMSNorm(self.head_v_dim, eps=norm_eps)
+        self.o_proj = nn.Linear(self.value_dim, hidden_size, bias=False)
+
+    @staticmethod
+    def _per_head_stats(x: torch.Tensor):
+        # mean, var, abs mean, L2 norm
+        mean = x.mean(dim=-1)
+        var = x.var(dim=-1, unbiased=False)
+        absmean = x.abs().mean(dim=-1)
+        l2 = x.norm(dim=-1)
+        return torch.stack([mean, var, absmean, l2], dim=-1) # (B,L,H,4)
+    def _dual_phase_epsilon(self):
+        step = float(self._step.item())
+        if step >= self.epsilon_decay_steps:
+            return self.epsilon_final
+        ratio = step / max(1., float(self.epsilon_decay_steps))
+        return self.epsilon_init + (self.epsilon_final - self.epsilon_init) * ratio
+    def _entropy_lambda(self):
+        step = float(self._step.item())
+        if step >= self.entropy_decay_steps:
+            return self.entropy_reg_final
+        ratio = step / max(1., float(self.entropy_decay_steps))
+        return self.entropy_reg_init + (self.entropy_reg_final - self.entropy_reg_init) * ratio
+    def forward(self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional["Cache"] = None,
+        use_cache: Optional[bool] = False,
+        output_attentions: Optional[bool] = False,
+        **kwargs,
+    ):
+        if attention_mask is not None:
+            assert attention_mask.ndim == 2, "attention_mask must be (batch, seq_len)"
+        batch_size, seq_len_in, _ = hidden_states.shape
+        last_state = None
+        if past_key_values is not None and self.layer_idx is not None and len(past_key_values) > self.layer_idx:
+            last_state = past_key_values[self.layer_idx]
+        cu_seqlens = kwargs.get("cu_seqlens", None)
+        indices = None
+        if attention_mask is not None:
+            indices, cu_seqlens, _ = get_unpad_data(attention_mask[:, -seq_len_in:])
+            hidden_states = index_first_axis(rearrange(hidden_states, "b s d -> (b s) d"), indices).unsqueeze(0)
+        conv_state_q = conv_state_k = conv_state_v = None
+        if last_state is not None and last_state.get('conv_state') is not None:
+            conv_state_q, conv_state_k, conv_state_v = last_state['conv_state']
+        q, conv_state_q = self.q_conv1d(self.q_proj(hidden_states), cache=conv_state_q, output_final_state=use_cache, cu_seqlens=cu_seqlens)
+        k, conv_state_k = self.k_conv1d(self.k_proj(hidden_states), cache=conv_state_k, output_final_state=use_cache, cu_seqlens=cu_seqlens)
+        v, conv_state_v = self.v_conv1d(self.v_proj(hidden_states), cache=conv_state_v, output_final_state=use_cache, cu_seqlens=cu_seqlens)
+        q, k = map(lambda x: rearrange(x, 'b l (h d) -> b l h d', d=self.head_k_dim), (q, k))
+        v = rearrange(v, 'b l (h d) -> b l h d', d=self.head_v_dim)
+        # Ensure numerical dtype matches Linear weight (prevents float != bf16 error)
+        dtype = self.o_proj.weight.dtype
+        q = q.to(dtype)
+        k = k.to(dtype)
+        v = v.to(dtype)
+        hidden_states = hidden_states.to(dtype)
+        # (all further tensors are based on q/k/v and hidden_states, so all match)
+        if self.qk_activation != "silu":
+            if self.qk_activation == "relu":
+                q, k = q.relu(), k.relu()
+            elif self.qk_activation == "elu":
+                q, k = elu_p1(q), elu_p1(k)
+            elif self.qk_activation != "identity":
+                raise NotImplementedError
+        if self.qk_norm == "sum":
+            q, k = sum_norm(q), sum_norm(k)
+        if self.use_beta:
+            beta = self.b_proj(hidden_states).sigmoid()
+        else:
+            beta = torch.ones_like(q[..., 0])
+        if self.allow_neg_eigval:
+            beta = beta * 2.0
+        q_d = rearrange(q, 'b l h d -> b h l d')
+        k_d = rearrange(k, 'b l h d -> b h l d')
+        v_d = rearrange(v, 'b l h d -> b h l d')
+        beta_d = rearrange(beta, 'b l h -> b h l')
+        delta_out, recurrent_state = delta_rule_chunkwise(q_d, k_d, v_d, beta_d)
+        delta_out = rearrange(delta_out, 'b h l d -> b l h d')
+        local_short = self.local_fir_short(v)
+        local_long = self.local_fir_long(v)
+        # Gate input construction (efficient, essential branch stats, per-head)
+        s_short = self._per_head_stats(local_short) # (b,l,h,4)
+        s_long = self._per_head_stats(local_long)
+        s_delta = self._per_head_stats(delta_out)
+        s_val = self._per_head_stats(v)
+        # Per-branch L2 norm (for adaptive mixing)
+        l2_short = local_short.norm(dim=-1)
+        l2_long = local_long.norm(dim=-1)
+        l2_delta = delta_out.norm(dim=-1)
+        l2_val = v.norm(dim=-1)
+        # Pairwise ||diff||
+        d1 = (local_short-local_long).norm(dim=-1)
+        d2 = (local_short-delta_out).norm(dim=-1)
+        d3 = (local_short-v).norm(dim=-1)
+        d4 = (local_long-delta_out).norm(dim=-1)
+        d5 = (local_long-v).norm(dim=-1)
+        d6 = (delta_out-v).norm(dim=-1)
+        # gate_in shape: (b,l,num_heads*total)
+        gate_in = torch.cat([rearrange(hidden_states, 'b l d -> b l d')] +
+            [rearrange(x, 'b l h s -> b l (h s)') for x in [s_short,s_long,s_delta,s_val]] +
+            [rearrange(x.unsqueeze(-1), 'b l h 1 -> b l (h)') for x in [l2_short,l2_long,l2_delta,l2_val]] +
+            [rearrange(x.unsqueeze(-1), 'b l h 1 -> b l (h)') for x in [d1, d2, d3, d4, d5, d6]], dim=-1)
+        gate_logits_full = self.fusion_gate_mlp(gate_in) # (b,l,num_heads*4)
+        gate_logits = rearrange(gate_logits_full, 'b l (h p) -> b l h p', h=self.num_heads, p=4)
+        temp = torch.exp(self.log_temp).unsqueeze(0).unsqueeze(0) # (1,1,h,1)
+        gate_logits = gate_logits / temp
+        fusion_weights = torch.softmax(gate_logits, dim=-1)
+        # Dual-phase epsilon (local/short-FIR min allocation)
+        eps = self._dual_phase_epsilon()
+        eps_vec = torch.tensor([eps, 0.0, 0.0, 0.0], device=gate_logits.device, dtype=dtype).view(1,1,1,4)
+        fusion_weights = torch.max(fusion_weights, eps_vec)
+        fusion_weights = fusion_weights / fusion_weights.sum(-1, keepdim=True)
+        # Mixture
+        o = (
+            fusion_weights[..., 0:1] * local_short
+            + fusion_weights[..., 1:2] * local_long
+            + fusion_weights[..., 2:3] * delta_out
+            + fusion_weights[..., 3:4] * v
+        )
+        # Cache update
+        if past_key_values is not None and self.layer_idx is not None and use_cache:
+            past_key_values.update(
+                recurrent_state=recurrent_state,
+                conv_state=(conv_state_q, conv_state_k, conv_state_v),
+                layer_idx=self.layer_idx,
+                offset=seq_len_in,
+            )
+        # Output norm/proj
+        if self.use_gate:
+            g_vec = rearrange(self.g_proj(hidden_states), 'b l (h d) -> b l h d', d=self.head_v_dim)
+            o = self.o_norm(o, g_vec)
+        else:
+            o = self.o_norm(o)
+        o = rearrange(o, 'b l h d -> b l (h d)')
+        o = self.o_proj(o)
+        if attention_mask is not None:
+            o = pad_input(o.squeeze(0), indices, batch_size, seq_len_in)
+        # Entropy penalty
+        ent = -(fusion_weights * (fusion_weights+1e-8).log()).sum(-1).mean()
+        self._step += 1
+        reg_loss = -self._entropy_lambda() * ent if self.training and self._entropy_lambda() > 0 else None
+        return o, reg_loss, past_key_values

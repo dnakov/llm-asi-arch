@@ -45,6 +45,13 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     elif pattern == "b h n c d -> b h (n c) d":
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
+    elif pattern == "b l h -> b h l":
+        return tensor.transpose(0, 2, 1)
+    elif pattern == "b l (h c) -> b l h c":
+        b, l, hc = tensor.shape
+        h = kwargs.get('h')
+        c = kwargs.get('c', hc // h)
+        return tensor.reshape(b, l, h, c)
     else:
         raise NotImplementedError(f"Pattern {pattern} not implemented")
 
@@ -83,7 +90,11 @@ class DepthwiseFIRConv1d(nn.Module):
         self.head_dim = head_dim
         
         filters = mx.zeros((num_heads, head_dim, self.kernel_size))
-        filters = filters.at[..., -1].set(1.0)
+        # MLX: Use where() to set last element to 1.0
+        mask = mx.zeros_like(filters)
+        mask = mx.where(mx.arange(self.kernel_size) == self.kernel_size - 1, 1.0, 0.0)
+        mask = mx.broadcast_to(mask, filters.shape)
+        filters = mx.where(mask, 1.0, filters)
         filters = filters + noise_std * mx.random.normal(filters.shape)
         self.filters = filters
 
@@ -94,14 +105,19 @@ class DepthwiseFIRConv1d(nn.Module):
         
         x_pad = mx.pad(x_f, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
         
-        y = mx.zeros((b, h * d, l))
-        for i in range(h * d):
-            for j in range(l):
-                start_idx = j
-                end_idx = j + self.kernel_size
-                y = y.at[..., i, j].set(
-                    mx.sum(x_pad[..., i, start_idx:end_idx] * weight[i, 0, :])
-                )
+        # MLX: Use vectorized operations without .at[].set()
+        # w shape: (h*d, 1, k), need to broadcast with window shape: (b, h*d, k)
+        w_broadcast = weight.squeeze(1)  # (h*d, k)
+        
+        windows = []
+        for i in range(l):
+            window = x_pad[:, :, i:i+self.kernel_size]  # (b, h*d, k)
+            # Broadcast: (b, h*d, k) * (h*d, k) -> (b, h*d, k)
+            conv_result = mx.sum(window * w_broadcast[None, :, :], axis=-1)  # (b, h*d)
+            windows.append(conv_result)
+        
+        # Stack all results
+        y = mx.stack(windows, axis=-1)  # (b, h*d, l)
         
         return _rearrange(y, "b (h d) l -> b l h d", h=h)
 
@@ -138,7 +154,9 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     w = att_inv @ k_beta
     
     S = mx.zeros((b, h, d_k, v.shape[-1]))
-    o = mx.zeros_like(v)
+    
+    # MLX: Build output chunks using list
+    o_chunks = []
     
     for idx in range(L_pad // chunk_size):
         q_i = q[:, :, idx]
@@ -148,8 +166,12 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
         attn_local = mx.where(mask_tri, 0, attn_local)
         
         u_i = u[:, :, idx] - w[:, :, idx] @ S
-        o = o.at[:, :, idx].set(q_i @ S + attn_local @ u_i)
+        o_chunk = q_i @ S + attn_local @ u_i
+        o_chunks.append(o_chunk)
         S = S + mx.transpose(k_i, [0, 1, 3, 2]) @ u_i
+    
+    # Stack all chunks to form output
+    o = mx.stack(o_chunks, axis=2)
     
     o = _rearrange(o, "b h n c d -> b h (n c) d")
     if pad_len > 0:
@@ -189,10 +211,9 @@ class ShortConvolution(nn.Module):
         self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=kernel_size-1, bias=bias)
 
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
-        x_conv = x.transpose(0, 2, 1)
-        y = self.conv(x_conv)
-        y = y[:, :, :x.shape[1]]
-        y = y.transpose(0, 2, 1)
+        # MLX Conv1d expects (batch, length, in_channels), x is already in this format
+        y = self.conv(x)
+        y = y[:, :x.shape[1], :]  # Trim to original sequence length
         
         if self.activation == "silu":
             y = nn.silu(y)
@@ -382,7 +403,12 @@ class DeltaNet(nn.Module):
         fusion_logits = self.fusion_gate_mlp(gate_in)
         fusion_logits = _rearrange(fusion_logits, "b l (h c) -> b l h c", h=self.num_heads, c=4)
         
-        fusion_logits = fusion_logits.at[..., 3].add(self.copy_path_bias.reshape(1, 1, -1))
+        # MLX: Add bias to last channel (index 3) without .at[].add()
+        bias_reshaped = self.copy_path_bias.reshape(1, 1, -1)
+        # Split fusion_logits, modify last channel, and concatenate back
+        logits_parts = [fusion_logits[..., i] for i in range(fusion_logits.shape[-1])]
+        logits_parts[3] = logits_parts[3] + bias_reshaped
+        fusion_logits = mx.stack(logits_parts, axis=-1)
         
         tau = nn.softplus(self.gate_log_tau) + self.temp_min
         fusion_logits = fusion_logits / tau.reshape(1, 1, -1, 1)

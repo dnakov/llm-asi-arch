@@ -474,12 +474,14 @@ class DeltaNet(nn.Module):
 
         # ---- 8. Dilated convolution branch + additive fusion ----
         if self.use_dilated_conv and attention_mask is None:
-            conv_in = mx.transpose(delta_out, (0, 2, 1))
+            # MLX Conv1d expects (batch, length, in_channels), delta_out is already in this format
+            conv_in = delta_out
             # causal left pad so conv is strictly causal
             pad_len = self.dilation * (self.dilated_kernel_size - 1)
-            conv_in = mx.pad(conv_in, [(0, 0), (0, 0), (pad_len, 0)])
+            conv_in = mx.pad(conv_in, [(0, 0), (pad_len, 0), (0, 0)])
             conv_out = self.dilated_conv(conv_in)
-            conv_out = mx.transpose(conv_out, (0, 2, 1))
+            # Trim to original length
+            conv_out = conv_out[:, :delta_out.shape[1], :]
 
             gate = mx.sigmoid(self.dilated_gate_proj(hidden_states))  # [B,T,C]
             # additive residual fusion (delta_out already contains main signal)

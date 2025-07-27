@@ -1,0 +1,1067 @@
+{
+  "total": 106,
+  "fixed": 0,
+  "already_valid": 0,
+  "failed": 106,
+  "details": [
+    {
+      "architecture": "delta_net_abrgf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -71,
+        "delimiter_fixes": 161
+      }
+    },
+    {
+      "architecture": "delta_net_acfg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -50,
+        "delimiter_fixes": 154
+      }
+    },
+    {
+      "architecture": "delta_net_acmg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -61,
+        "delimiter_fixes": 151
+      }
+    },
+    {
+      "architecture": "delta_net_adaptive_hier_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -61,
+        "delimiter_fixes": 169
+      }
+    },
+    {
+      "architecture": "delta_net_adaptive_mix_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -44,
+        "delimiter_fixes": 144
+      }
+    },
+    {
+      "architecture": "delta_net_adgr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -64,
+        "delimiter_fixes": 170
+      }
+    },
+    {
+      "architecture": "delta_net_aefg_hr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -78,
+        "delimiter_fixes": 192
+      }
+    },
+    {
+      "architecture": "delta_net_aegf_br",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -71,
+        "delimiter_fixes": 180
+      }
+    },
+    {
+      "architecture": "delta_net_aeoc",
+      "success": false,
+      "message": "Still invalid: Line 40: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "import_fixes": -52,
+        "delimiter_fixes": 170
+      }
+    },
+    {
+      "architecture": "delta_net_afbt",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -52,
+        "delimiter_fixes": 146
+      }
+    },
+    {
+      "architecture": "delta_net_afef",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -76,
+        "delimiter_fixes": 174
+      }
+    },
+    {
+      "architecture": "delta_net_afp",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -71,
+        "delimiter_fixes": 166
+      }
+    },
+    {
+      "architecture": "delta_net_afrc",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -65,
+        "delimiter_fixes": 163
+      }
+    },
+    {
+      "architecture": "delta_net_aft_dsi",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -63,
+        "delimiter_fixes": 174
+      }
+    },
+    {
+      "architecture": "delta_net_aft",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -50,
+        "delimiter_fixes": 147
+      }
+    },
+    {
+      "architecture": "delta_net_aggf_v2",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -62,
+        "delimiter_fixes": 179
+      }
+    },
+    {
+      "architecture": "delta_net_ahic",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -72,
+        "delimiter_fixes": 177
+      }
+    },
+    {
+      "architecture": "delta_net_ahm_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -77,
+        "delimiter_fixes": 178
+      }
+    },
+    {
+      "architecture": "delta_net_aif",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -71,
+        "delimiter_fixes": 172
+      }
+    },
+    {
+      "architecture": "delta_net_amf_routing",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -63,
+        "delimiter_fixes": 152
+      }
+    },
+    {
+      "architecture": "delta_net_annealed_eklf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -66,
+        "delimiter_fixes": 161
+      }
+    },
+    {
+      "architecture": "delta_net_bias_init_mix_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -52,
+        "delimiter_fixes": 137
+      }
+    },
+    {
+      "architecture": "delta_net_bscgf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "import_fixes": -52,
+        "delimiter_fixes": 155
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_br",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -66,
+        "delimiter_fixes": 168
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_dpaf_eash",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "import_fixes": -50,
+        "delimiter_fixes": 155
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_mf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -62,
+        "delimiter_fixes": 162
+      }
+    },
+    {
+      "architecture": "delta_net_cagf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -64,
+        "delimiter_fixes": 183
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_rc_pf_hybrid",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -63,
+        "delimiter_fixes": 164
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_rc_pf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -66,
+        "delimiter_fixes": 169
+      }
+    },
+    {
+      "architecture": "delta_net_cpaghr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -68,
+        "delimiter_fixes": 146
+      }
+    },
+    {
+      "architecture": "delta_net_crdg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -66,
+        "delimiter_fixes": 151
+      }
+    },
+    {
+      "architecture": "delta_net_csm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -66,
+        "delimiter_fixes": 184
+      }
+    },
+    {
+      "architecture": "delta_net_ddfsanr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -63,
+        "delimiter_fixes": 159
+      }
+    },
+    {
+      "architecture": "delta_net_dfpcr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -48,
+        "delimiter_fixes": 156
+      }
+    },
+    {
+      "architecture": "delta_net_dlgm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -52,
+        "delimiter_fixes": 153
+      }
+    },
+    {
+      "architecture": "delta_net_dmshf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -61,
+        "delimiter_fixes": 163
+      }
+    },
+    {
+      "architecture": "delta_net_dual_path_fusion",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -54,
+        "delimiter_fixes": 153
+      }
+    },
+    {
+      "architecture": "delta_net_dyn_decay_fractal_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -70,
+        "delimiter_fixes": 172
+      }
+    },
+    {
+      "architecture": "delta_net_dyn_gate_mix",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -53,
+        "delimiter_fixes": 165
+      }
+    },
+    {
+      "architecture": "delta_net_dynfuse",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -69,
+        "delimiter_fixes": 169
+      }
+    },
+    {
+      "architecture": "delta_net_efagm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -62,
+        "delimiter_fixes": 171
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_cagf_rc_norm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -69,
+        "delimiter_fixes": 168
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_floor",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -72,
+        "delimiter_fixes": 172
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_kl_floor_gate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -75,
+        "delimiter_fixes": 182
+      }
+    },
+    {
+      "architecture": "delta_net_erfg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -81,
+        "delimiter_fixes": 173
+      }
+    },
+    {
+      "architecture": "delta_net_gae_ms3e",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -69,
+        "delimiter_fixes": 184
+      }
+    },
+    {
+      "architecture": "delta_net_gtmlp",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "import_fixes": -53,
+        "delimiter_fixes": 155
+      }
+    },
+    {
+      "architecture": "delta_net_hafmg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -60,
+        "delimiter_fixes": 173
+      }
+    },
+    {
+      "architecture": "delta_net_hafs",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -81,
+        "delimiter_fixes": 183
+      }
+    },
+    {
+      "architecture": "delta_net_hdsr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -69,
+        "delimiter_fixes": 172
+      }
+    },
+    {
+      "architecture": "delta_net_head_gate_ema",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -57,
+        "delimiter_fixes": 166
+      }
+    },
+    {
+      "architecture": "delta_net_headgated",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -70,
+        "delimiter_fixes": 175
+      }
+    },
+    {
+      "architecture": "delta_net_hefth",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -60,
+        "delimiter_fixes": 165
+      }
+    },
+    {
+      "architecture": "delta_net_hgm_ident",
+      "success": false,
+      "message": "Still invalid: Line 40: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -48,
+        "delimiter_fixes": 178
+      }
+    },
+    {
+      "architecture": "delta_net_hhgass",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -52,
+        "delimiter_fixes": 155
+      }
+    },
+    {
+      "architecture": "delta_net_hhmr",
+      "success": false,
+      "message": "Still invalid: Line 163: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -63,
+        "delimiter_fixes": 44
+      }
+    },
+    {
+      "architecture": "delta_net_hmgapf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -65,
+        "delimiter_fixes": 179
+      }
+    },
+    {
+      "architecture": "delta_net_hpaf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -55,
+        "delimiter_fixes": 167
+      }
+    },
+    {
+      "architecture": "delta_net_hrem",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -52,
+        "delimiter_fixes": 163
+      }
+    },
+    {
+      "architecture": "delta_net_hsgm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -56,
+        "delimiter_fixes": 162
+      }
+    },
+    {
+      "architecture": "delta_net_hsigctx",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -67,
+        "delimiter_fixes": 146
+      }
+    },
+    {
+      "architecture": "delta_net_htcg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -62,
+        "delimiter_fixes": 160
+      }
+    },
+    {
+      "architecture": "delta_net_htfr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -67,
+        "delimiter_fixes": 193
+      }
+    },
+    {
+      "architecture": "delta_net_htgmsm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -67,
+        "delimiter_fixes": 169
+      }
+    },
+    {
+      "architecture": "delta_net_hwg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -59,
+        "delimiter_fixes": 147
+      }
+    },
+    {
+      "architecture": "delta_net_hwggm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -72,
+        "delimiter_fixes": 169
+      }
+    },
+    {
+      "architecture": "delta_net_hybfloor",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -64,
+        "delimiter_fixes": 173
+      }
+    },
+    {
+      "architecture": "delta_net_hybrid_floor_gt",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -83,
+        "delimiter_fixes": 180
+      }
+    },
+    {
+      "architecture": "delta_net_len_hgate_mixanneal",
+      "success": false,
+      "message": "Still invalid: Line 69: unmatched ')'",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -86,
+        "delimiter_fixes": 194
+      }
+    },
+    {
+      "architecture": "delta_net_mafr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -71,
+        "delimiter_fixes": 172
+      }
+    },
+    {
+      "architecture": "delta_net_mfg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -61,
+        "delimiter_fixes": 160
+      }
+    },
+    {
+      "architecture": "delta_net_mor",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -57,
+        "delimiter_fixes": 157
+      }
+    },
+    {
+      "architecture": "delta_net_ms_adaptive_gstat3",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -62,
+        "delimiter_fixes": 175
+      }
+    },
+    {
+      "architecture": "delta_net_ms_gstat3_quota",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -58,
+        "delimiter_fixes": 163
+      }
+    },
+    {
+      "architecture": "delta_net_ms_hsm_tempgate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 10,
+        "import_fixes": -63,
+        "delimiter_fixes": 203
+      }
+    },
+    {
+      "architecture": "delta_net_ms_hsm_widefloor",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 10,
+        "import_fixes": -63,
+        "delimiter_fixes": 195
+      }
+    },
+    {
+      "architecture": "delta_net_ms_resgate",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -67,
+        "delimiter_fixes": 162
+      }
+    },
+    {
+      "architecture": "delta_net_mscmix_pointwise",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -52,
+        "delimiter_fixes": 185
+      }
+    },
+    {
+      "architecture": "delta_net_msdfdm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -54,
+        "delimiter_fixes": 151
+      }
+    },
+    {
+      "architecture": "delta_net_msfr_mn",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -55,
+        "delimiter_fixes": 166
+      }
+    },
+    {
+      "architecture": "delta_net_mshmfv2",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -58,
+        "delimiter_fixes": 162
+      }
+    },
+    {
+      "architecture": "delta_net_ndg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -62,
+        "delimiter_fixes": 135
+      }
+    },
+    {
+      "architecture": "delta_net_oahmgr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -67,
+        "delimiter_fixes": 177
+      }
+    },
+    {
+      "architecture": "delta_net_omsgf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -55,
+        "delimiter_fixes": 141
+      }
+    },
+    {
+      "architecture": "delta_net_pathgated",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -71,
+        "delimiter_fixes": 180
+      }
+    },
+    {
+      "architecture": "delta_net_pfr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -67,
+        "delimiter_fixes": 159
+      }
+    },
+    {
+      "architecture": "delta_net_phfg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -62,
+        "delimiter_fixes": 177
+      }
+    },
+    {
+      "architecture": "delta_net_phsg5",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -66,
+        "delimiter_fixes": 151
+      }
+    },
+    {
+      "architecture": "delta_net_psafg",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -55,
+        "delimiter_fixes": 143
+      }
+    },
+    {
+      "architecture": "delta_net_psfr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -73,
+        "delimiter_fixes": 167
+      }
+    },
+    {
+      "architecture": "delta_net_qsr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -59,
+        "delimiter_fixes": 143
+      }
+    },
+    {
+      "architecture": "delta_net_rggf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -64,
+        "delimiter_fixes": 173
+      }
+    },
+    {
+      "architecture": "delta_net_rmsgm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -58,
+        "delimiter_fixes": 159
+      }
+    },
+    {
+      "architecture": "delta_net_selm",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 5,
+        "import_fixes": -50,
+        "delimiter_fixes": 157
+      }
+    },
+    {
+      "architecture": "delta_net_ser_minfloor",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -57,
+        "delimiter_fixes": 149
+      }
+    },
+    {
+      "architecture": "delta_net_sigf_ptu",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -64,
+        "delimiter_fixes": 165
+      }
+    },
+    {
+      "architecture": "delta_net_sparsemax_temperature",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 9,
+        "import_fixes": -69,
+        "delimiter_fixes": 159
+      }
+    },
+    {
+      "architecture": "delta_net_spectral_fusion",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "delimiter_fixes": 79
+      }
+    },
+    {
+      "architecture": "delta_net_ssg_sparsemax_temp",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -61,
+        "delimiter_fixes": 155
+      }
+    },
+    {
+      "architecture": "delta_net_syngf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -59,
+        "delimiter_fixes": 161
+      }
+    },
+    {
+      "architecture": "delta_net_taigr_xs",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 6,
+        "import_fixes": -58,
+        "delimiter_fixes": 179
+      }
+    },
+    {
+      "architecture": "delta_net_tapr",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -76,
+        "delimiter_fixes": 181
+      }
+    },
+    {
+      "architecture": "delta_net_tareia",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 7,
+        "import_fixes": -74,
+        "delimiter_fixes": 181
+      }
+    },
+    {
+      "architecture": "delta_net_tarf",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -60,
+        "delimiter_fixes": 153
+      }
+    },
+    {
+      "architecture": "delta_net_triscale",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -65,
+        "delimiter_fixes": 163
+      }
+    },
+    {
+      "architecture": "delta_net_udmag",
+      "success": false,
+      "message": "Still invalid: Line 42: unexpected indent",
+      "fixes_applied": {
+        "type_annotations": 8,
+        "import_fixes": -71,
+        "delimiter_fixes": 180
+      }
+    }
+  ]
+}

@@ -1,0 +1,1242 @@
+{
+  "total": 106,
+  "fixed": 0,
+  "already_valid": 0,
+  "failed": 106,
+  "details": [
+    {
+      "architecture": "delta_net_abrgf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "syntax_commas": 173,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 222
+      }
+    },
+    {
+      "architecture": "delta_net_acfg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 176,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 216
+      }
+    },
+    {
+      "architecture": "delta_net_acmg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 160,
+        "string_fixes": 4,
+        "indentation_fixes": 213
+      }
+    },
+    {
+      "architecture": "delta_net_adaptive_hier_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 168,
+        "string_fixes": 4,
+        "indentation_fixes": 231
+      }
+    },
+    {
+      "architecture": "delta_net_adaptive_mix_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 137,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 181
+      }
+    },
+    {
+      "architecture": "delta_net_adgr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 171,
+        "string_fixes": 8,
+        "indentation_fixes": 248
+      }
+    },
+    {
+      "architecture": "delta_net_aefg_hr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 223,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 302
+      }
+    },
+    {
+      "architecture": "delta_net_aegf_br",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 219,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 288
+      }
+    },
+    {
+      "architecture": "delta_net_aeoc",
+      "success": false,
+      "message": "Still invalid: Line 4: unterminated string literal (detected at line 4)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 204,
+        "bracket_fixes": 1,
+        "string_fixes": 5,
+        "indentation_fixes": 242
+      }
+    },
+    {
+      "architecture": "delta_net_afbt",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 184,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 235
+      }
+    },
+    {
+      "architecture": "delta_net_afef",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 206,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 272
+      }
+    },
+    {
+      "architecture": "delta_net_afp",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "string_fixes": 5,
+        "indentation_fixes": 239
+      }
+    },
+    {
+      "architecture": "delta_net_afrc",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 215
+      }
+    },
+    {
+      "architecture": "delta_net_aft_dsi",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 204,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 261
+      }
+    },
+    {
+      "architecture": "delta_net_aft",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 173,
+        "bracket_fixes": 1,
+        "string_fixes": 5,
+        "indentation_fixes": 219
+      }
+    },
+    {
+      "architecture": "delta_net_aggf_v2",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 204,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 255
+      }
+    },
+    {
+      "architecture": "delta_net_ahic",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 209,
+        "string_fixes": 6,
+        "indentation_fixes": 264
+      }
+    },
+    {
+      "architecture": "delta_net_ahm_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 213,
+        "bracket_fixes": 1,
+        "string_fixes": 5,
+        "indentation_fixes": 266
+      }
+    },
+    {
+      "architecture": "delta_net_aif",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 203,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 249
+      }
+    },
+    {
+      "architecture": "delta_net_amf_routing",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "string_fixes": 4,
+        "indentation_fixes": 231
+      }
+    },
+    {
+      "architecture": "delta_net_annealed_eklf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 205,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 259
+      }
+    },
+    {
+      "architecture": "delta_net_bias_init_mix_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 146,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 189
+      }
+    },
+    {
+      "architecture": "delta_net_bscgf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 164,
+        "string_fixes": 4,
+        "indentation_fixes": 217
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_br",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 183,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 224
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_dpaf_eash",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 221,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 266
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_mf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 169,
+        "string_fixes": 4,
+        "indentation_fixes": 218
+      }
+    },
+    {
+      "architecture": "delta_net_cagf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 168,
+        "string_fixes": 6,
+        "indentation_fixes": 233
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_rc_pf_hybrid",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 173,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 227
+      }
+    },
+    {
+      "architecture": "delta_net_cagf_rc_pf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 188,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 228
+      }
+    },
+    {
+      "architecture": "delta_net_cpaghr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 206,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 254
+      }
+    },
+    {
+      "architecture": "delta_net_crdg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 176,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 217
+      }
+    },
+    {
+      "architecture": "delta_net_csm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 193,
+        "string_fixes": 6,
+        "indentation_fixes": 254
+      }
+    },
+    {
+      "architecture": "delta_net_ddfsanr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 211,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 267
+      }
+    },
+    {
+      "architecture": "delta_net_dfpcr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 176,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 215
+      }
+    },
+    {
+      "architecture": "delta_net_dlgm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 161,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 200
+      }
+    },
+    {
+      "architecture": "delta_net_dmshf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 207,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 253
+      }
+    },
+    {
+      "architecture": "delta_net_dual_path_fusion",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 143,
+        "string_fixes": 4,
+        "indentation_fixes": 193
+      }
+    },
+    {
+      "architecture": "delta_net_dyn_decay_fractal_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 183,
+        "string_fixes": 8,
+        "indentation_fixes": 239
+      }
+    },
+    {
+      "architecture": "delta_net_dyn_gate_mix",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 158,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 215
+      }
+    },
+    {
+      "architecture": "delta_net_dynfuse",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 201,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 242
+      }
+    },
+    {
+      "architecture": "delta_net_efagm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 205,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 260
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_cagf_rc_norm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 201,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 260
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_floor",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 203,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 269
+      }
+    },
+    {
+      "architecture": "delta_net_entropy_kl_floor_gate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 214,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 285
+      }
+    },
+    {
+      "architecture": "delta_net_erfg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 206,
+        "string_fixes": 4,
+        "indentation_fixes": 282
+      }
+    },
+    {
+      "architecture": "delta_net_gae_ms3e",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 193,
+        "string_fixes": 6,
+        "indentation_fixes": 284
+      }
+    },
+    {
+      "architecture": "delta_net_gtmlp",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 222
+      }
+    },
+    {
+      "architecture": "delta_net_hafmg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 195,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 244
+      }
+    },
+    {
+      "architecture": "delta_net_hafs",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 211,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 253
+      }
+    },
+    {
+      "architecture": "delta_net_hdsr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 212,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 264
+      }
+    },
+    {
+      "architecture": "delta_net_head_gate_ema",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 169,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 207
+      }
+    },
+    {
+      "architecture": "delta_net_headgated",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 183,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 239
+      }
+    },
+    {
+      "architecture": "delta_net_hefth",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 189,
+        "string_fixes": 4,
+        "indentation_fixes": 239
+      }
+    },
+    {
+      "architecture": "delta_net_hgm_ident",
+      "success": false,
+      "message": "Still invalid: Line 4: unterminated string literal (detected at line 4)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 184,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 244
+      }
+    },
+    {
+      "architecture": "delta_net_hhgass",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 208,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 255
+      }
+    },
+    {
+      "architecture": "delta_net_hhmr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "syntax_commas": 164,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 215
+      }
+    },
+    {
+      "architecture": "delta_net_hmgapf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 203,
+        "bracket_fixes": 1,
+        "string_fixes": 8,
+        "indentation_fixes": 242
+      }
+    },
+    {
+      "architecture": "delta_net_hpaf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 189,
+        "string_fixes": 6,
+        "indentation_fixes": 237
+      }
+    },
+    {
+      "architecture": "delta_net_hrem",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 192,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 241
+      }
+    },
+    {
+      "architecture": "delta_net_hsgm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 193,
+        "string_fixes": 6,
+        "indentation_fixes": 238
+      }
+    },
+    {
+      "architecture": "delta_net_hsigctx",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 158,
+        "string_fixes": 4,
+        "indentation_fixes": 206
+      }
+    },
+    {
+      "architecture": "delta_net_htcg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 176,
+        "string_fixes": 6,
+        "indentation_fixes": 217
+      }
+    },
+    {
+      "architecture": "delta_net_htfr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 196,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 247
+      }
+    },
+    {
+      "architecture": "delta_net_htgmsm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 202,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 246
+      }
+    },
+    {
+      "architecture": "delta_net_hwg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 155,
+        "string_fixes": 4,
+        "indentation_fixes": 199
+      }
+    },
+    {
+      "architecture": "delta_net_hwggm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "bracket_fixes": 1,
+        "string_fixes": 8,
+        "indentation_fixes": 234
+      }
+    },
+    {
+      "architecture": "delta_net_hybfloor",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 181,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 234
+      }
+    },
+    {
+      "architecture": "delta_net_hybrid_floor_gt",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 214,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 276
+      }
+    },
+    {
+      "architecture": "delta_net_len_hgate_mixanneal",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "syntax_commas": 230,
+        "string_fixes": 8,
+        "indentation_fixes": 308
+      }
+    },
+    {
+      "architecture": "delta_net_mafr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 203,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 258
+      }
+    },
+    {
+      "architecture": "delta_net_mfg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 185,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 232
+      }
+    },
+    {
+      "architecture": "delta_net_mor",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 174,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 212
+      }
+    },
+    {
+      "architecture": "delta_net_ms_adaptive_gstat3",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 182,
+        "bracket_fixes": 1,
+        "string_fixes": 5,
+        "indentation_fixes": 239
+      }
+    },
+    {
+      "architecture": "delta_net_ms_gstat3_quota",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 171,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 218
+      }
+    },
+    {
+      "architecture": "delta_net_ms_hsm_tempgate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 194,
+        "string_fixes": 4,
+        "indentation_fixes": 251
+      }
+    },
+    {
+      "architecture": "delta_net_ms_hsm_widefloor",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 188,
+        "string_fixes": 4,
+        "indentation_fixes": 248
+      }
+    },
+    {
+      "architecture": "delta_net_ms_resgate",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 178,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 224
+      }
+    },
+    {
+      "architecture": "delta_net_mscmix_pointwise",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 156,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 233
+      }
+    },
+    {
+      "architecture": "delta_net_msdfdm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 152,
+        "string_fixes": 4,
+        "indentation_fixes": 204
+      }
+    },
+    {
+      "architecture": "delta_net_msfr_mn",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 196,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 234
+      }
+    },
+    {
+      "architecture": "delta_net_mshmfv2",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 173,
+        "string_fixes": 9,
+        "indentation_fixes": 204
+      }
+    },
+    {
+      "architecture": "delta_net_ndg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 167,
+        "string_fixes": 6,
+        "indentation_fixes": 215
+      }
+    },
+    {
+      "architecture": "delta_net_oahmgr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 200,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 264
+      }
+    },
+    {
+      "architecture": "delta_net_omsgf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 182,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 225
+      }
+    },
+    {
+      "architecture": "delta_net_pathgated",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 199,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 259
+      }
+    },
+    {
+      "architecture": "delta_net_pfr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 194,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 245
+      }
+    },
+    {
+      "architecture": "delta_net_phfg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 186,
+        "string_fixes": 4,
+        "indentation_fixes": 250
+      }
+    },
+    {
+      "architecture": "delta_net_phsg5",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 170,
+        "string_fixes": 9,
+        "indentation_fixes": 218
+      }
+    },
+    {
+      "architecture": "delta_net_psafg",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 168,
+        "string_fixes": 4,
+        "indentation_fixes": 210
+      }
+    },
+    {
+      "architecture": "delta_net_psfr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 188,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 252
+      }
+    },
+    {
+      "architecture": "delta_net_qsr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 192,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 240
+      }
+    },
+    {
+      "architecture": "delta_net_rggf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 174,
+        "string_fixes": 6,
+        "indentation_fixes": 245
+      }
+    },
+    {
+      "architecture": "delta_net_rmsgm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 165,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 217
+      }
+    },
+    {
+      "architecture": "delta_net_selm",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 167,
+        "bracket_fixes": 1,
+        "string_fixes": 8,
+        "indentation_fixes": 220
+      }
+    },
+    {
+      "architecture": "delta_net_ser_minfloor",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 175,
+        "string_fixes": 4,
+        "indentation_fixes": 226
+      }
+    },
+    {
+      "architecture": "delta_net_sigf_ptu",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 218,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 266
+      }
+    },
+    {
+      "architecture": "delta_net_sparsemax_temperature",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 197,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 248
+      }
+    },
+    {
+      "architecture": "delta_net_spectral_fusion",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 116,
+        "string_fixes": 8,
+        "indentation_fixes": 152
+      }
+    },
+    {
+      "architecture": "delta_net_ssg_sparsemax_temp",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 192,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 240
+      }
+    },
+    {
+      "architecture": "delta_net_syngf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 196,
+        "bracket_fixes": 1,
+        "string_fixes": 6,
+        "indentation_fixes": 242
+      }
+    },
+    {
+      "architecture": "delta_net_taigr_xs",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 215,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 271
+      }
+    },
+    {
+      "architecture": "delta_net_tapr",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 213,
+        "string_fixes": 4,
+        "indentation_fixes": 280
+      }
+    },
+    {
+      "architecture": "delta_net_tareia",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 197,
+        "string_fixes": 6,
+        "indentation_fixes": 261
+      }
+    },
+    {
+      "architecture": "delta_net_tarf",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 171,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 206
+      }
+    },
+    {
+      "architecture": "delta_net_triscale",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 205,
+        "bracket_fixes": 1,
+        "string_fixes": 4,
+        "indentation_fixes": 251
+      }
+    },
+    {
+      "architecture": "delta_net_udmag",
+      "success": false,
+      "message": "Still invalid: Line 6: unterminated string literal (detected at line 6)",
+      "fixes_applied": {
+        "line_continuation_commas": 1,
+        "syntax_commas": 206,
+        "string_fixes": 4,
+        "indentation_fixes": 249
+      }
+    }
+  ]
+}

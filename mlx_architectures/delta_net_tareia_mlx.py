@@ -44,6 +44,13 @@ def _rearrange(tensor: mx.array, pattern: str, **kwargs) -> mx.array:
     elif pattern == "b h n c d -> b h (n c) d":
         b, h, n, c, d = tensor.shape
         return tensor.reshape(b, h, n * c, d)
+    elif pattern == "b l h -> b h l":
+        return tensor.transpose(0, 2, 1)
+    elif pattern == "b l (h c) -> b l h c":
+        b, l, hc = tensor.shape
+        h = kwargs.get('h')
+        c = kwargs.get('c', hc // h)
+        return tensor.reshape(b, l, h, c)
     else:
         raise NotImplementedError(f"Pattern {pattern} not implemented")
 
@@ -82,9 +89,16 @@ class DepthwiseFIRConv1d(nn.Module):
         self.head_dim = head_dim
         
         filters = mx.zeros((num_heads, head_dim, self.kernel_size))
-        filters = filters.at[..., -1].set(1.0)
-        filters = filters + noise_std * mx.random.normal(filters.shape)
-        self.filters = filters
+        # MLX: Set last element to 1.0 (Dirac initialization)
+        # Create mask for last element and use where to set it
+        last_idx_mask = mx.zeros_like(filters)
+        indices = mx.arange(self.kernel_size)
+        last_mask = (indices == self.kernel_size - 1).reshape(1, 1, -1)
+        last_mask = mx.broadcast_to(last_mask, filters.shape)
+        filters = mx.where(last_mask, 1.0, filters)
+        # Add noise to the filters
+        noise = mx.random.normal(filters.shape) * noise_std
+        self.filters = filters + noise
 
     def __call__(self, x: mx.array) -> mx.array:
         b, l, h, d = x.shape
@@ -93,18 +107,18 @@ class DepthwiseFIRConv1d(nn.Module):
         
         x_pad = mx.pad(x_f, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
         
-        y = mx.zeros((b, h * d, l))
-        for i in range(h * d):
-            for j in range(l):
-                start_idx = j
-                end_idx = j + self.kernel_size
-                y = y.at[..., i, j].set(
-                    mx.sum(x_pad[..., i, start_idx:end_idx] * weight[i, 0, :])
-                )
+        # MLX: Vectorized convolution operation
+        y_list = []
+        for j in range(l):
+            start_idx = j
+            end_idx = j + self.kernel_size
+            x_slice = x_pad[:, :, start_idx:end_idx]  # (b, h*d, kernel_size)
+            conv_result = mx.sum(x_slice * weight[:, 0, :], axis=2)  # (b, h*d)
+            y_list.append(conv_result)
+        y = mx.stack(y_list, axis=2)  # (b, h*d, l)
         
         return _rearrange(y, "b (h d) l -> b l h d", h=h)
 
-@mx.compile
 def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     """Chunk-wise delta rule implementation"""
     b, h, L, d_k = q.shape
@@ -137,7 +151,7 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
     w = att_inv @ k_beta
     
     S = mx.zeros((b, h, d_k, v.shape[-1]))
-    o = mx.zeros_like(v)
+    output_chunks = []
     
     for idx in range(L_pad // chunk_size):
         q_i = q[:, :, idx]
@@ -147,9 +161,12 @@ def _delta_rule_chunkwise(q, k, v, beta, chunk_size: int = 32):
         attn_local = mx.where(mask_tri, 0, attn_local)
         
         u_i = u[:, :, idx] - w[:, :, idx] @ S
-        o = o.at[:, :, idx].set(q_i @ S + attn_local @ u_i)
+        chunk_output = q_i @ S + attn_local @ u_i
+        output_chunks.append(chunk_output)
         S = S + mx.transpose(k_i, [0, 1, 3, 2]) @ u_i
     
+    # Concatenate all chunks
+    o = mx.stack(output_chunks, axis=2)  # (b, h, n_chunks, chunk_size, d)
     o = _rearrange(o, "b h n c d -> b h (n c) d")
     if pad_len > 0:
         o = o[:, :, :L]
@@ -188,10 +205,9 @@ class ShortConvolution(nn.Module):
         self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size, padding=kernel_size-1, bias=bias)
 
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
-        x_conv = x.transpose(0, 2, 1)
-        y = self.conv(x_conv)
-        y = y[:, :, :x.shape[1]]
-        y = y.transpose(0, 2, 1)
+        # MLX Conv1d expects (batch, length, in_channels), x is already in this format
+        y = self.conv(x)
+        y = y[:, :x.shape[1], :]  # Trim to original sequence length
         
         if self.activation == "silu":
             y = nn.silu(y)

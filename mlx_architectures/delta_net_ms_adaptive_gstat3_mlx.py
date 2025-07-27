@@ -213,7 +213,7 @@ class DepthwiseFIRConv1d(nn.Module):
         self.kernel_size = kernel_size
         self.filters = mx.random.normal((num_heads, head_dim, kernel_size)) * 0.02
 
-    def forward(self, x: mx.array) -> mx.array:
+    def __call__(self, x: mx.array) -> mx.array:
         b, l, h, d = x.shape
         x_f = rearrange_for_mlx(x, "b l h d -> b (h d) l")
         weight = rearrange_for_mlx(self.filters, "h d k -> (h d) 1 k")
@@ -242,7 +242,7 @@ class ShortConvolution(nn.Module):
         self.activation = activation
         self.weight = mx.random.normal((hidden_size, kernel_size)) * 0.02
         
-    def forward(self, x: mx.array, cache=None, output_final_state=False, cu_seqlens=None):
+    def __call__(self, x: mx.array, cache=None, output_final_state=False, cu_seqlens=None):
         # Simple 1D convolution implementation
         b, l, d = x.shape
         x_pad = mx.pad(x, [(0, 0), (self.kernel_size - 1, 0), (0, 0)])
@@ -266,7 +266,7 @@ class RMSNorm(nn.Module):
         self.eps = eps
         self.weight = mx.ones((hidden_size,))
         
-    def forward(self, x: mx.array) -> mx.array:
+    def __call__(self, x: mx.array) -> mx.array:
         norm = mx.sqrt(mx.mean(x * x, axis=-1, keepdims=True) + self.eps)
         return self.weight * x / norm
 
@@ -276,7 +276,7 @@ class FusedRMSNormGated(nn.Module):
         self.eps = eps
         self.weight = mx.ones((hidden_size,))
         
-    def forward(self, x: mx.array, gate: mx.array) -> mx.array:
+    def __call__(self, x: mx.array, gate: mx.array) -> mx.array:
         norm = mx.sqrt(mx.mean(x * x, axis=-1, keepdims=True) + self.eps)
         return self.weight * (x / norm) * gate
 
@@ -401,7 +401,7 @@ class DeltaNet(nn.Module):
             
         self.o_proj = nn.Linear(self.value_dim, self.hidden_size, bias=False)
 
-    def forward(
+    def __call__(
         self,
         hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
@@ -413,13 +413,13 @@ class DeltaNet(nn.Module):
         batch_size, seq_len, _ = hidden_states.shape
         
         # ------- QKV + short conv -------
-        q = self.q_conv1d.forward(self.q_proj(hidden_states))
+        q = self.q_conv1d(self.q_proj(hidden_states))
         if isinstance(q, tuple):
             q = q[0]
-        k = self.k_conv1d.forward(self.k_proj(hidden_states))
+        k = self.k_conv1d(self.k_proj(hidden_states))
         if isinstance(k, tuple):
             k = k[0]
-        v = self.v_conv1d.forward(self.v_proj(hidden_states))
+        v = self.v_conv1d(self.v_proj(hidden_states))
         if isinstance(v, tuple):
             v = v[0]
             
@@ -459,8 +459,8 @@ class DeltaNet(nn.Module):
         
         # --------- Multi-scale FIR paths -----------
         v_direct = v
-        fir_short = self.fir_short.forward(v_direct)
-        fir_long = self.fir_long.forward(v_direct)
+        fir_short = self.fir_short(v_direct)
+        fir_long = self.fir_long(v_direct)
         
         # --------- Gate stats (mean, std, max) for all 4 branches --------
         branch_outputs = [fir_short, fir_long, delta_out, v_direct]
@@ -501,9 +501,9 @@ class DeltaNet(nn.Module):
         # -------- Output norm/proj ----------------
         if self.use_gate:
             g = rearrange_for_mlx(self.g_proj(hidden_states), "... (h d) -> ... h d", d=self.head_v_dim)
-            o = self.o_norm.forward(o, g)
+            o = self.o_norm(o, g)
         else:
-            o = self.o_norm.forward(o)
+            o = self.o_norm(o)
             
         o = rearrange_for_mlx(o, "b l h d -> b l (h d)")
         o = self.o_proj(o)
@@ -536,6 +536,6 @@ class DeltaNet(nn.Module):
                     
             head_diversity_loss = -head_cos / (self.num_heads * (self.num_heads - 1) / 2)
             reg_loss = entropy_loss + kl_loss + head_diversity_loss
-            return o, reg_loss, past_key_values
+            return o
             
-        return o, None, past_key_values
+        return o

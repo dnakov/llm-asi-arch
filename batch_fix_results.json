@@ -1,0 +1,154 @@
+{
+  "fixed_count": 0,
+  "total_attempted": 37,
+  "still_broken": [
+    {
+      "arch": "delta_net_adgr",
+      "error": "Syntax Error line 283: unterminated string literal (detected at line 283)"
+    },
+    {
+      "arch": "delta_net_cagf_br",
+      "error": "Syntax Error line 408: unterminated string literal (detected at line 408)"
+    },
+    {
+      "arch": "delta_net_csm",
+      "error": "Syntax Error line 214: closing parenthesis ']' does not match opening parenthesis '(' on line 171"
+    },
+    {
+      "arch": "delta_net_ddfsanr",
+      "error": "Syntax Error line 75: closing parenthesis ']' does not match opening parenthesis '(' on line 57"
+    },
+    {
+      "arch": "delta_net_dlgm",
+      "error": "Syntax Error line 265: unterminated string literal (detected at line 265)"
+    },
+    {
+      "arch": "delta_net_dmshf",
+      "error": "Syntax Error line 165: closing parenthesis ']' does not match opening parenthesis '(' on line 137"
+    },
+    {
+      "arch": "delta_net_dynfuse",
+      "error": "Syntax Error line 207: closing parenthesis ']' does not match opening parenthesis '(' on line 154"
+    },
+    {
+      "arch": "delta_net_entropy_kl_floor_gate",
+      "error": "Syntax Error line 394: unterminated string literal (detected at line 394)"
+    },
+    {
+      "arch": "delta_net_erfg",
+      "error": "Syntax Error line 151: closing parenthesis ']' does not match opening parenthesis '(' on line 85"
+    },
+    {
+      "arch": "delta_net_gtmlp",
+      "error": "Syntax Error line 199: closing parenthesis ']' does not match opening parenthesis '(' on line 177"
+    },
+    {
+      "arch": "delta_net_hafmg",
+      "error": "Syntax Error line 163: closing parenthesis ']' does not match opening parenthesis '(' on line 130"
+    },
+    {
+      "arch": "delta_net_hafs",
+      "error": "Syntax Error line 100: unmatched ']'"
+    },
+    {
+      "arch": "delta_net_hmgapf",
+      "error": "Syntax Error line 129: unterminated string literal (detected at line 129)"
+    },
+    {
+      "arch": "delta_net_hpaf",
+      "error": "Syntax Error line 127: closing parenthesis ']' does not match opening parenthesis '(' on line 113"
+    },
+    {
+      "arch": "delta_net_htcg",
+      "error": "Syntax Error line 202: closing parenthesis ']' does not match opening parenthesis '(' on line 153"
+    },
+    {
+      "arch": "delta_net_htfr",
+      "error": "Syntax Error line 162: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_hwggm",
+      "error": "Syntax Error line 246: closing parenthesis ']' does not match opening parenthesis '(' on line 137"
+    },
+    {
+      "arch": "delta_net_hybrid_floor_gt",
+      "error": "Syntax Error line 195: closing parenthesis ']' does not match opening parenthesis '(' on line 168"
+    },
+    {
+      "arch": "delta_net_mafr",
+      "error": "Syntax Error line 218: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_mfg",
+      "error": "Syntax Error line 211: closing parenthesis ']' does not match opening parenthesis '(' on line 178"
+    },
+    {
+      "arch": "delta_net_ms_gstat3_quota",
+      "error": "Syntax Error line 160: closing parenthesis ']' does not match opening parenthesis '(' on line 134"
+    },
+    {
+      "arch": "delta_net_ms_hsm_tempgate",
+      "error": "Syntax Error line 182: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_ms_hsm_widefloor",
+      "error": "Syntax Error line 196: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_ms_resgate",
+      "error": "Syntax Error line 244: unmatched ')'"
+    },
+    {
+      "arch": "delta_net_msdfdm",
+      "error": "Syntax Error line 189: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_msfr_mn",
+      "error": "Syntax Error line 135: closing parenthesis ']' does not match opening parenthesis '(' on line 72"
+    },
+    {
+      "arch": "delta_net_ndg",
+      "error": "Syntax Error line 237: closing parenthesis ']' does not match opening parenthesis '(' on line 151"
+    },
+    {
+      "arch": "delta_net_oahmgr",
+      "error": "Syntax Error line 149: closing parenthesis ']' does not match opening parenthesis '(' on line 131"
+    },
+    {
+      "arch": "delta_net_pathgated",
+      "error": "Syntax Error line 201: closing parenthesis ']' does not match opening parenthesis '(' on line 148"
+    },
+    {
+      "arch": "delta_net_pfr",
+      "error": "Syntax Error line 197: closing parenthesis ']' does not match opening parenthesis '(' on line 144"
+    },
+    {
+      "arch": "delta_net_psafg",
+      "error": "Syntax Error line 104: closing parenthesis ']' does not match opening parenthesis '(' on line 67"
+    },
+    {
+      "arch": "delta_net_psfr",
+      "error": "Syntax Error line 216: closing parenthesis ']' does not match opening parenthesis '(' on line 179"
+    },
+    {
+      "arch": "delta_net_rggf",
+      "error": "Syntax Error line 174: closing parenthesis ']' does not match opening parenthesis '(' on line 119"
+    },
+    {
+      "arch": "delta_net_sigf_ptu",
+      "error": "Syntax Error line 186: closing parenthesis ']' does not match opening parenthesis '(' on line 163"
+    },
+    {
+      "arch": "delta_net_syngf",
+      "error": "Syntax Error line 195: closing parenthesis ']' does not match opening parenthesis '(' on line 155"
+    },
+    {
+      "arch": "delta_net_tapr",
+      "error": "Syntax Error line 194: closing parenthesis ']' does not match opening parenthesis '(' on line 152"
+    },
+    {
+      "arch": "delta_net_tareia",
+      "error": "Syntax Error line 194: closing parenthesis ']' does not match opening parenthesis '(' on line 152"
+    }
+  ]
+}
