@@ -1,265 +1,186 @@
-from __future__ import annotations
-
-"""
-MLX-converted architecture: delta_net_hwggm
-Auto-converted from PyTorch to MLX format
-"""
-
-# MLX Utility Functions(replacing, PyTorch/FLA dependencies)
-import mlx.core as mx
-import mlx.nn as nn
-from typing import Tuple, Optional, List, Dict
-
-def _rearrange(tensor:, mx.array, pattern: str, **kwargs) -> mx.array:
-    """Simple einops rearrange replacement for common patterns"""
-    if "b l(h, d) -> b l h d" in pattern:
-        h = kwargs.get('h', kwargs.get('d', 1))
-        b, l, hd = tensor.shape
-        d = hd // h
-        return tensor.reshape(b, l, h, d)
-    elif "b l h d -> b l(h, d)" in pattern:
-        b, l, h, d = tensor.shape
-        return tensor.reshape(b, l, h * d)
-    elif "b l h d -> b h l d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h l d -> b l h d" in pattern:
-        return tensor.transpose(0, 2, 1, 3)
-    elif "b h(n, c) d -> b h n c d" in pattern:
-        c = kwargs.get('c', 1)
-        b, h, nc, d = tensor.shape
-        n = nc // c
-        return tensor.reshape(b, h, n, c, d)
-    elif "b h n c d -> b h(n, c) d" in pattern:
-        b, h, n, c, d = tensor.shape
-        return tensor.reshape(b, h, n * c, d)
-    else:
-        # Fallback: return tensor as-is
-        return tensor
-
-def _l2norm(x:, mx.array) -> mx.array:
-    """L2 normalization"""
-    return x / mx.linalg.norm(x, axis=-1,
-        keepdims=True).clip(min=1e-8)
-
-def _masked_fill(tensor:, mx.array, mask: mx.array, value: float) -> mx.array:
-    """Masked fill operation"""
-    return mx.where(mask, value, tensor)
-
-def _get_unpad_data(attention_mask):
-    """Simple unpad data extraction (placeholder)"""
-    # Simplified version - just return indices for non-masked positions
-    indices = mx.where(attention_mask.flatten())[0]
-    cu_seqlens = mx.array([0, attention_mask.shape[-1]])
-    max_len = attention_mask.shape[-1]
-    return indices, cu_seqlens, max_len
-
-def _index_first_axis(tensor:, mx.array, indices: mx.array) -> mx.array:
-    """Index first axis"""
-    return tensor[indices]
-
-def _pad_input(tensor:, mx.array, indices: mx.array, batch_size: int, seq_len: int) -> mx.array:
-    """Pad input back to original shape"""
-    # Simplified version
-    return tensor.reshape(batch_size, seq_len, -1)
-
-class _ShortConvolution(nn.Module):
-    """MLX replacement for FLA ShortConvolution"""
-    def __init__(self, hidden_size: int,
-    kernel_size: int = 4
-    activation: str = None
-    bias: bool = False):
-        super().__init__()
-        self.conv = nn.Conv1d(hidden_size, hidden_size, kernel_size
-        padding=kernel_size-1
-        bias=bias)
-        self.activation = activation
-        
-    def __call__(self, x, cache=None
-        output_final_state=False
-        cu_seqlens=None):
-        # x: (B, L, D)
-        x_conv = x.transpose(0, 2, 1)  # (B, D, L)
-        out = self.conv(x_conv)
-        out = out[:, :, :x.shape[1]]  # Causal truncation
-        out = out.transpose(0, 2, 1)  # (B, L, D)
-        
-        if self.activation == 'silu':
-            out = nn.silu(out)
-        elif self.activation == 'gelu':
-            out = nn.gelu(out)
-            
-        if output_final_state:
-            return out
-        None  # Simplified - no cache state
-        return out
-
-
 # -*- coding: utf-8 -*-
 """
-DeltaNet – Head-Wise Gating with Guaranteed Global Mixing (DeltaNet-HWGGM)
-Identifier: delta_net_hwggm
+DeltaNet – Head-Wise Gating with Guaranteed Global Mixing (DeltaNet-HWGGM) - MLX Implementation
+================================================================================================
+Identifier: delta_net_hwggm_mlx
 
-This evolution unifies the strengths of **head-wise per-path routing** (from, HWG) with a **token-level global mixing gate** that *guarantees* the global
-Δ-rule memory receives a dedicated share of the signal overcoming the
+This evolution unifies the strengths of **head-wise per-path routing** (from
+HWG) with a **token-level global mixing gate** that *guarantees* the global
+Δ-rule memory receives a dedicated share of the signal, overcoming the
 local–global trade-off observed across previous variants.
 
-Key Innovations(enabled, by, default)
+Key Innovations (enabled by default)
+------------------------------------
 1. Head-Wise Local Router (3-way)
    • Each attention head owns an independent softmax router over the *local*
-     paths – Short-FIR, Long-FIR and direct Value.  A strong warm-start bias(+4, by, default) on the Value path preserves information early in
+     paths – Short-FIR, Long-FIR, and direct Value.  A strong warm-start bias
+     (+4 by default) on the Value path preserves information early in
      training while allowing competition.
 
 2. Token-Level Global Mixer (Δ-rule)
-   • A lightweight 2-layer MLP (`global_gate_mlp`) produces a **scalar γ∈(0, 1)**
+   • A lightweight 2-layer MLP (`global_gate_mlp`) produces a **scalar γ∈(0,1)**
      per token that blends the head-wise local composition with the global
      Δ-rule output:
 
-         o = (1−γ) · o_local  +  γ · Δ_out(Eq., 1)
+         o = (1−γ) · o_local  +  γ · Δ_out                 (Eq. 1)
 
      This guarantees gradient flow to the global memory **independent** of the
-     head-wise router resolving the path-starvation issue highlighted in the
-     experimental portfolio (ARC Winogrande regression under, HWG).
+     head-wise router, resolving the path-starvation issue highlighted in the
+     experimental portfolio (ARC, Winogrande regression under HWG).
 
 3. Identity-Initialised Depth-Wise FIR
    • The dual-scale depth-wise FIR convolutions keep the proven identity
-     initialisation(+, small, noise) for stable optimisation.
+     initialisation (+ small noise) for stable optimisation.
 
 4. Fully O(N) & Causal
    • The chunk-wise Δ-rule kernel and depth-wise 1-D convolutions maintain
      strict causality and linear complexity.
 
-Interface class name (`DeltaNet`) and forward signature remain unchanged ensuring drop-in compatibility with training pipelines and checkpoints.
+Interface, class name (`DeltaNet`) and forward signature remain unchanged,
+ensuring drop-in compatibility with training pipelines and checkpoints.
 """
+from __future__ import annotations
 
 import math
+from typing import Dict, Optional, Tuple, List
+
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.nn as F
-
-
+from mlx import Module
 
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
 
-def elu_p1(x:, mx.array) -> mx.array:
+def elu_p1(x: mx.array) -> mx.array:
     """Shifted ELU (≥0)."""
-    return (F.elu(x, 1.0, False) + 1.0)
+    return mx.maximum(mx.exp(x) - 1.0, 0.0) + 1.0
 
+def sum_norm(x: mx.array) -> mx.array:
+    """Normalise rows to sum = 1 along last dim."""
+    return x / mx.sum(x, axis=-1, keepdims=True)
 
-def sum_norm(x:, mx.array) -> mx.array:
-    """Normalise rows to, sum = 1 along last dim."""
-    return(x, / x.sum(-1
-        keepdim=True))
+def l2norm(x: mx.array) -> mx.array:
+    """L2 normalize along last dimension."""
+    return x / mx.sqrt(mx.sum(x * x, axis=-1, keepdims=True) + 1e-8)
 
 # ---------------------------------------------------------------------------
-# Chunk-wise O(N) Δ-rule (identical maths as, baseline)
+# Chunk-wise O(N) Δ-rule (identical maths as baseline)
 # ---------------------------------------------------------------------------
 
-@mx.compile  # type: ignore[arg-type]
-# pylint: disable=too-many-locals,too-many-statements,invalid-name
-
-def delta_rule_chunkwise(q:, mx.array,  # (B,H,L, Dk)
-    k: mx.array,  # (B,H,L, Dk)
-    v: mx.array,  # (B,H,L, Dv)
-    beta: mx.array,  # (B H, L)
+def delta_rule_chunkwise(
+    q: mx.array,  # (B,H,L,Dk)
+    k: mx.array,  # (B,H,L,Dk)
+    v: mx.array,  # (B,H,L,Dv)
+    beta: mx.array,  # (B,H,L)
     *,
-    chunk_size: int = 32):
+    chunk_size: int = 32,
+):
     """Delta-rule solver in O(N) with causal masking.
 
     **Note**: `q`, `k`, `v`, `beta` should *not* contain inter-sample data –
     i.e. every batch index is assumed independent. The caller is responsible
-    for ensuring this invariant(see, `DeltaNet._delta_rule_batched`).
+    for ensuring this invariant (see `DeltaNet._delta_rule_batched`).
     """
     b, h, L, d_k = q.shape
-        pad_len = (chunk_size - L % chunk_size) % chunk_size
+    pad_len = (chunk_size - L % chunk_size) % chunk_size
     if pad_len:
-        pad_cfg = (0,
-        0, 0, pad_len)
-        q, k, v = (mx.pad(t, pad_cfg) for t in (q, k, v))
-        beta = mx.pad(beta, (0, pad_len))
+        q = mx.pad(q, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        k = mx.pad(k, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        v = mx.pad(v, [(0, 0), (0, 0), (0, pad_len), (0, 0)])
+        beta = mx.pad(beta, [(0, 0), (0, 0), (0, pad_len)])
     L_pad = L + pad_len
 
     # normalise q/k + β-scaling ----------------------------------------
-    q = _l2norm(q)
-    k = _l2norm(k)
+    q = l2norm(q)
+    k = l2norm(k)
     v = v * beta[..., None]
     k_beta = k * beta[..., None]
 
     # reshape to blocks -------------------------------------------------
-    q, k, v, k_beta = map(
-        lambda t: _rearrange(t, "b h, (n, c) d -> b h n c d", c=chunk_size),
-        (q, k, v, k_beta))
+    n_chunks = L_pad // chunk_size
+    q = q.reshape(b, h, n_chunks, chunk_size, d_k)
+    k = k.reshape(b, h, n_chunks, chunk_size, d_k)
+    v = v.reshape(b, h, n_chunks, chunk_size, -1)
+    k_beta = k_beta.reshape(b, h, n_chunks, chunk_size, d_k)
 
-    tri = mx.triu(mx.ones(chunk_size, chunk_size
-    dtype=mx.bool_), 0)
-    inv = -(k_beta @ k.transpose(-1, -2))._masked_fill(tri, 0)
+    tri = mx.triu(mx.ones((chunk_size, chunk_size)), k=0).astype(mx.bool_)
+    inv = -(k_beta @ mx.transpose(k, [0, 1, 2, 4, 3]))
+    inv = mx.where(tri, 0, inv)
+    
     for i in range(1, chunk_size):
-        inv[..., i
-        :i] += (inv[..., i, :, None] * inv[..., :, :i]).sum(-2)
-        inv = inv + mx.eye(chunk_size, dtype = inv.dtype)
-    inv = inv
-        u = inv @ v
-        w = inv @ k_beta
-        S = mx.zeros(b, h, d_k v.shape[-1])
+        inv_slice = inv[..., i, :i]
+        inv_update = mx.sum(inv[..., i:i+1, :] * inv[..., :, :i], axis=-2)
+        inv = inv.at[..., i, :i].set(inv_slice + inv_update)
+    
+    inv = inv + mx.eye(chunk_size)
+
+    u = inv @ v
+    w = inv @ k_beta
+
+    S = mx.zeros((b, h, d_k, v.shape[-1]))
     o = mx.zeros_like(v)
-    tri_strict = mx.triu(mx.ones(chunk_size, chunk_size
-    dtype=mx.bool_), 1)
-    for idx in range(L_pad, // chunk_size):
+    tri_strict = mx.triu(mx.ones((chunk_size, chunk_size)), k=1).astype(mx.bool_)
+    
+    for idx in range(n_chunks):
         q_i, k_i = q[:, :, idx], k[:, :, idx]
-        attn_local = (q_i @ k_i.transpose(-1, -2))._masked_fill(tri_strict, 0)
+        attn_local = (q_i @ mx.transpose(k_i, [0, 1, 3, 2]))
+        attn_local = mx.where(tri_strict, 0, attn_local)
         u_i = u[:, :, idx] - w[:, :, idx] @ S
-        o[:, :
-        idx] = q_i @ S + attn_local @ u_i
-        S = S + k_i.transpose(-1, -2) @ u_i
-        o = _rearrange(o, "b h n c d -> b h, (n, c) d")
+        o_i = q_i @ S + attn_local @ u_i
+        o = o.at[:, :, idx].set(o_i)
+        S = S + mx.transpose(k_i, [0, 1, 3, 2]) @ u_i
+
+    o = o.reshape(b, h, L_pad, -1)
     if pad_len:
-        o = o[:
-        :, :L]
-    return o, S  # (B H,L, Dv), state
+        o = o[:, :, :L]
+    return o, S  # (B,H,L,Dv), state
 
 # ---------------------------------------------------------------------------
-# Depth-wise causal FIR convolution (identity, init)
+# Depth-wise causal FIR convolution (identity init)
 # ---------------------------------------------------------------------------
 
-class DepthwiseFIRConv1d(nn.Module):
+class DepthwiseFIRConv1d(Module):
     """Per-head, depth-wise causal 1-D FIR convolution."""
 
-    def __init__(self, num_heads: int, head_dim: int,
-    kernel_size: int = 31
-    init_std: float = 0.02):
+    def __init__(self, *, num_heads: int, head_dim: int, kernel_size: int = 31, init_std: float = 0.02):
         super().__init__()
         self.kernel_size = int(kernel_size)
-        weight = mx.zeros(num_heads, head_dim, self.kernel_size)
-        with mx.disable_grad():
-            weight[..., -1] = 1.0  # causal identity
-            weight.add_(mx.randn_like(weight) * init_std)
-        self.filters = mx.array(weight), def forward(self, x: mx.array) -> mx.array:  # x: (B,L,H, D)
+        weight = mx.zeros((num_heads, head_dim, self.kernel_size))
+        # Identity initialization - set last position to 1.0 for causal identity
+        weight = weight.at[:, :, -1].set(1.0)
+        # Add small noise
+        noise = mx.random.normal(weight.shape) * init_std
+        weight = weight + noise
+        self.filters = weight
+
+    def __call__(self, x: mx.array) -> mx.array:  # x: (B,L,H,D)
         b, l, h, d = x.shape
-        x_f = _rearrange(x, "b l h d -> b, (h, d) l")
-        w = _rearrange(self.filters, "h d k ->, (h, d) 1 k")
-        x_pad = mx.pad(x_f, (self.kernel_size - 1, 0))
-        y = F.conv1d(x_pad, w
-        groups = h * d)
-        return _rearrange(y, "b, (h, d) l -> b l h d", h=h)
+        x_f = x.transpose(0, 2, 3, 1).reshape(b, h * d, l)  # (B, H*D, L)
+        w = self.filters.reshape(h * d, 1, self.kernel_size)
+        x_pad = mx.pad(x_f, [(0, 0), (0, 0), (self.kernel_size - 1, 0)])
+        
+        # Manual grouped convolution since MLX doesn't have conv1d groups
+        y_list = []
+        for g in range(h * d):
+            conv_result = mx.conv1d(x_pad[:, g:g+1, :], w[g:g+1, :, :])
+            y_list.append(conv_result)
+        y = mx.concatenate(y_list, axis=1)
+        
+        return y.reshape(b, h, d, l).transpose(0, 3, 1, 2)  # (B, L, H, D)
 
 # ---------------------------------------------------------------------------
-# Optional typing helpers
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Main DeltaNet implementation (HWG + Global, Mix)
+# Main DeltaNet implementation (HWG + Global Mix)
 # ---------------------------------------------------------------------------
 
-class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
+class DeltaNet(Module):
     """DeltaNet with head-wise local routing and guaranteed global mixing."""
 
-    # ------------------------------------------------------------------
-    # Constructor
-    # ------------------------------------------------------------------
     def __init__(
-        self, *,
+        self,
+        *,
         mode: str = "hwggm",  # head-wise gating + global mix
-        d_model: Optional[int] = None,
+        d_model: int | None = None,
         hidden_size: int = 1024,
         expand_k: float = 1.0,
         expand_v: float = 1.0,
@@ -270,7 +191,7 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         conv_size: int = 4,
         conv_bias: bool = False,
         allow_neg_eigval: bool = False,
-        layer_idx: Optional[int] = None,
+        layer_idx: int | None = None,
         qk_activation: str = "silu",
         qk_norm: str = "l2",
         norm_eps: float = 1e-5,
@@ -279,7 +200,9 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         fir_long_kernel: int = 31,
         # --- gating ---
         value_warm_start_bias: float = 4.0,
-        global_gate_hidden: int = 128 **kwargs: Dict) -> None:
+        global_gate_hidden: int = 128,
+        **kwargs: Dict,
+    ) -> None:
         super().__init__()
 
         if d_model is not None:
@@ -291,6 +214,61 @@ class DeltaNet(nn.Module):  # pylint: disable=too-many-instance-attributes
         self.qk_norm = qk_norm
         self.use_beta = use_beta
         self.use_gate = use_gate
+        self.use_short_conv = use_short_conv
+        self.allow_neg_eigval = allow_neg_eigval
+        self.layer_idx = layer_idx or 0
+
+        # dimensions ---------------------------------------------------
+        self.key_dim = int(hidden_size * expand_k)
+        self.value_dim = int(hidden_size * expand_v)
+        if self.key_dim % num_heads != 0 or self.value_dim % num_heads != 0:
+            raise ValueError("Key/value dims must divide num_heads")
+        self.head_k_dim = self.key_dim // num_heads
+        self.head_v_dim = self.value_dim // num_heads
+
+        # projections --------------------------------------------------
+        self.q_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
+        self.k_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
+        self.v_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+        if use_beta:
+            self.b_proj = nn.Linear(hidden_size, num_heads, bias=False)
+
+        # short conv branch -------------------------------------------
+        if use_short_conv:
+            # Simple 1D convolution layers for MLX
+            self.q_conv1d = nn.Conv1d(self.key_dim, self.key_dim, conv_size, padding=conv_size-1, bias=conv_bias)
+            self.k_conv1d = nn.Conv1d(self.key_dim, self.key_dim, conv_size, padding=conv_size-1, bias=conv_bias)
+            self.v_conv1d = nn.Conv1d(self.value_dim, self.value_dim, conv_size, padding=conv_size-1, bias=conv_bias)
+        else:
+            raise UserWarning("ShortConvolution is mandatory for DeltaNet performance.")
+
+        # FIR branches -------------------------------------------------
+        self.local_fir_short = DepthwiseFIRConv1d(num_heads=num_heads, head_dim=self.head_v_dim, kernel_size=fir_short_kernel)
+        self.local_fir_long = DepthwiseFIRConv1d(num_heads=num_heads, head_dim=self.head_v_dim, kernel_size=fir_long_kernel)
+
+        # head-wise local router (3-way) -------------------------------
+        router_in_dim = hidden_size + 3 * self.head_v_dim  # hidden + FIR (short & long) + value
+        self.local_fusion_weight = mx.zeros((num_heads, router_in_dim, 3))
+        self.local_fusion_bias = mx.zeros((num_heads, 3))
+        # strong warm-start on value path (index 2)
+        self.local_fusion_bias = self.local_fusion_bias.at[:, 2].set(value_warm_start_bias)
+
+        # token-level global gate γ ------------------------------------
+        self.global_gate_mlp = [
+            nn.Linear(hidden_size, global_gate_hidden, bias=True),
+            nn.Linear(global_gate_hidden, 1, bias=True),
+        ]
+        # Initialize bias to start with small γ ≈ 0.05
+        self.global_gate_mlp[-1].bias = mx.full((1,), -3.0)
+
+        # output norms / projection -----------------------------------
+        if use_gate:
+            self.g_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+            # Simplified norm - MLX doesn't have FusedRMSNormGated
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps=norm_eps)
+        else:
+            self.o_norm = nn.RMSNorm(self.head_v_dim, eps=norm_eps)
+        self.o_proj = nn.Linear(self.value_dim, hidden_size, bias=False)
         self.use_short_conv = use_short_conv
         self.allow_neg_eigval = allow_neg_eigval
         self.layer_idx = layer_idx or 0
