@@ -129,7 +129,7 @@ class _SpectralConv(nn.Module):
         self.head_dim = head_dim
         self.fft_block_size = fft_block_size  # if None → full-sequence FFT
         # learnable log-amplitude & log-decay per head (initialised to mild LPF)
-        # These need to be nn.Parameter-like for proper gradient tracking
+        # Register as parameters for proper gradient tracking
         self.log_amp = mx.zeros((num_heads,))
         self.log_decay = mx.full((num_heads,), math.log(0.3))
         # learnable static blend between identity & spectral path (per head)
@@ -305,6 +305,7 @@ class DeltaNet(nn.Module):
         self.spectral_conv = _SpectralConv(num_heads, self.head_v_dim, fft_block_size=fft_block_size)
 
         # output normalisation / projection -----------------------------
+        self.use_gate = use_gate
         if use_gate:
             # Simplified gated norm for MLX
             self.g_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
@@ -338,7 +339,12 @@ class DeltaNet(nn.Module):
         v_spec = self.spectral_conv(v)  # (B,L,H,D)
 
         # normalisation & projection back --------------------------------
-        out = self.o_norm(v_spec)
+        if self.use_gate:
+            # Apply gated normalization
+            gate = self.g_proj(hidden_states).reshape(*v_spec.shape)  # (B,L,H,D)
+            out = self.o_norm(v_spec) * mx.sigmoid(gate)
+        else:
+            out = self.o_norm(v_spec)
         out = out.reshape(*out.shape[:-2], self.value_dim)  # (B,L,V)
         out = self.o_proj(out)
         return out, None, past_key_values
