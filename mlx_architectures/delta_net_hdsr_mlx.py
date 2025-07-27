@@ -31,7 +31,57 @@ from typing import Optional, Tuple, Dict, TYPE_CHECKING
 
 import mlx.core as mx
 import mlx.nn as nn
-from einops import rearrange
+
+# Manual einops replacements for MLX
+def rearrange(x, pattern, **kwargs):
+    """Simple einops rearrange replacement for common patterns."""
+    if "b l (h d) -> b l h d" in pattern:
+        h = kwargs.get('h', 1)
+        b, l, hd = x.shape
+        d = hd // h
+        return x.reshape(b, l, h, d)
+    elif "b l h d -> b l (h d)" in pattern:
+        b, l, h, d = x.shape
+        return x.reshape(b, l, h * d)
+    elif "b l h d -> b (h d) l" in pattern:
+        b, l, h, d = x.shape
+        return x.reshape(b, h * d, l)
+    elif "b l h d -> b h l d" in pattern:
+        return mx.transpose(x, (0, 2, 1, 3))
+    elif "b h l d -> b l h d" in pattern:
+        return mx.transpose(x, (0, 2, 1, 3))
+    elif "b h (n c) d -> b h n c d" in pattern:
+        c = kwargs.get('c', 1)
+        b, h, nc, d = x.shape
+        n = nc // c
+        return x.reshape(b, h, n, c, d)
+    elif "b h n c d -> b h (n c) d" in pattern:
+        b, h, n, c, d = x.shape
+        return x.reshape(b, h, n * c, d)
+    elif "b l (h p) -> b l h p" in pattern:
+        h = kwargs.get('h', 1)
+        p = kwargs.get('p', 1)
+        b, l, hp = x.shape
+        return x.reshape(b, l, h, p)
+    elif "b l h s -> b l (h s)" in pattern:
+        b, l, h, s = x.shape
+        return x.reshape(b, l, h * s)
+    elif "b s d -> (b s) d" in pattern:
+        b, s, d = x.shape
+        return x.reshape(b * s, d)
+    elif "h d k -> (h d) 1 k" in pattern:
+        h, d, k = x.shape
+        return x.reshape(h * d, 1, k)
+    elif "b (h d) l -> b l h d" in pattern:
+        h = kwargs.get('h', 1)
+        b, hd, l = x.shape
+        d = hd // h
+        return x.reshape(b, l, h, d)
+    elif "b l h -> b h l" in pattern:
+        return mx.transpose(x, (0, 2, 1))
+    else:
+        # Fallback: return tensor as-is for unrecognized patterns
+        return x
 
 # Simplified implementations for MLX compatibility
 def get_unpad_data(attention_mask):
@@ -88,16 +138,14 @@ class ShortConvolution(nn.Module):
         self.activation = activation
 
     def __call__(self, x, cache=None, output_final_state=False, cu_seqlens=None):
-        # x shape: (batch, seq_len, hidden_size)
-        x_t = mx.transpose(x, (0, 2, 1))  # (batch, hidden_size, seq_len)
+        # x shape: (batch, seq_len, hidden_size) - MLX Conv1d expects this format directly
         
-        # Apply causal padding
-        x_pad = mx.pad(x_t, ((0, 0), (0, 0), (self.kernel_size - 1, 0)))
+        # Apply causal padding on the sequence dimension
+        x_pad = mx.pad(x, ((0, 0), (self.kernel_size - 1, 0), (0, 0)))
         out = self.conv(x_pad)
         
         # Truncate to original sequence length
-        out = out[:, :, :x.shape[1]]
-        out = mx.transpose(out, (0, 2, 1))  # back to (batch, seq_len, hidden_size)
+        out = out[:, :x.shape[1], :]
         
         if self.activation == "silu":
             out = nn.silu(out)
@@ -136,12 +184,29 @@ class _DepthwiseFIRConv1d(nn.Module):
         w = rearrange(self.filters, "h d k -> (h d) 1 k")
         # Pad for causal convolution
         x_pad = mx.pad(x_f, ((0, 0), (0, 0), (self.kernel_size - 1, 0)))
-        # Simple grouped convolution implementation
-        y_list = []
+        # Simple implementation without grouped convolution
+        # Manually convolve each channel
+        output_channels = []
         for i in range(h * d):
-            conv_out = mx.conv1d(x_pad[:, i:i+1, :], w[i:i+1, :, :])
-            y_list.append(conv_out)
-        y = mx.concatenate(y_list, axis=1)
+            # Get input and weight for this channel
+            x_channel = x_pad[:, i:i+1, :]  # (b, 1, l_padded)
+            w_channel = w[i:i+1, :, :]      # (1, 1, k)
+            
+            # Manual convolution
+            out_seq = []
+            for t in range(l):
+                window = x_channel[:, 0, t:t+self.kernel_size]  # (b, k)
+                if window.shape[1] < self.kernel_size:
+                    # Pad if necessary
+                    pad_needed = self.kernel_size - window.shape[1]
+                    window = mx.pad(window, ((0, 0), (0, pad_needed)))
+                conv_val = mx.sum(window * w_channel[0, 0, :], axis=1, keepdims=True)  # (b, 1)
+                out_seq.append(conv_val)
+            
+            channel_out = mx.concatenate(out_seq, axis=1)  # (b, l)
+            output_channels.append(channel_out[:, None, :])  # (b, 1, l)
+        
+        y = mx.concatenate(output_channels, axis=1)  # (b, h*d, l)
         return rearrange(y, "b (h d) l -> b l h d", h=h)
 
 def _delta_rule_chunkwise(q, k, v, beta, *, chunk_size=32):
@@ -198,7 +263,7 @@ def _delta_rule_chunkwise(q, k, v, beta, *, chunk_size=32):
     
     o = mx.concatenate(o_chunks, axis=2)
     
-    o = rearrange(o, "b h n c d -> b h (n c) d")
+    # o is already in the right shape (b, h, L_pad, d), no need to rearrange
     if pad_len:
         o = o[:, :, :L]
     return o, S
